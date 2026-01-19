@@ -1,1 +1,88 @@
-njhjj
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: sans-serif; background: #f4f4f7; margin: 0; padding: 15px; }
+        .card { background: #fff; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .section-title { font-size: 11px; color: #8e8e93; font-weight: bold; margin: 10px 5px; text-transform: uppercase; }
+        .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f5; text-decoration: none; color: #000; }
+        .menu-item:last-child { border-bottom: none; }
+        .btn-copy { background: #007aff; color: #fff; border: none; width: 100%; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .t-card { background: #fff; padding: 12px 5px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
+        i { color: #007aff; margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2 id="user-name">Загрузка...</h2>
+        <div id="status" style="font-weight: bold; color: #007aff;">Подключение...</div>
+    </div>
+
+    <div class="section-title">Уже есть V2rayTun?</div>
+    <div class="card">
+        <button class="btn-copy" onclick="copyKey()">Скопировать ключ</button>
+    </div>
+
+    <div class="section-title">Подключение VPN</div>
+    <div class="card">
+        <a href="https://apps.apple.com/us/app/v2raytun/id6474102839" target="_blank" class="menu-item">
+            <span><i class="fab fa-apple"></i> iPhone (iOS)</span>
+            <i class="fas fa-chevron-right" style="color:#ccc"></i>
+        </a>
+        <a href="https://play.google.com/store/apps/details?id=com.v2raytun.android" target="_blank" class="menu-item">
+            <span><i class="fab fa-android"></i> Android</span>
+            <i class="fas fa-chevron-right" style="color:#ccc"></i>
+        </a>
+        <a href="https://github.com/v2rayDesktop/v2rayDesktop/releases" target="_blank" class="menu-item">
+            <span><i class="fas fa-laptop"></i> Windows / PC</span>
+            <i class="fas fa-chevron-right" style="color:#ccc"></i>
+        </a>
+    </div>
+
+    <div class="section-title">Тарифы</div>
+    <div id="tariffs" class="grid"></div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        let vpnKey = "";
+
+        async function loadData() {
+            try {
+                // Добавляем случайное число к ссылке, чтобы обойти кэш
+                const url = `http://130.49.146.17:8000/user_data/${tg.initDataUnsafe.user.id}?t=${Date.now()}`;
+                const res = await fetch(url);
+                const json = await res.json();
+                
+                if (json.status === "success") {
+                    const d = json.data;
+                    vpnKey = d.vpn_key;
+                    document.getElementById('user-name').innerText = d.username;
+                    document.getElementById('status').innerText = "Подписка до: " + d.expiry_date;
+                    
+                    let html = "";
+                    d.tariffs.forEach(t => {
+                        html += `<div class="t-card"><b>${t.name}</b><br><span style="color:#007aff">${t.price}</span></div>`;
+                    });
+                    document.getElementById('tariffs').innerHTML = html;
+                }
+            } catch (e) {
+                document.getElementById('status').innerText = "Ошибка: Откройте в браузере";
+                document.getElementById('status').style.color = "red";
+            }
+        }
+
+        function copyKey() {
+            navigator.clipboard.writeText(vpnKey);
+            tg.showAlert("✅ Ключ скопирован!");
+        }
+
+        tg.expand();
+        loadData();
+    </script>
+</body>
+</html>
