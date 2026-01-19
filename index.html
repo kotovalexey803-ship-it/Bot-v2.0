@@ -6,30 +6,44 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { font-family: sans-serif; background: #f4f4f5; padding: 15px; }
+        body { font-family: sans-serif; background: #f4f4f5; padding: 15px; margin: 0; }
         .card { background: #fff; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #eee; }
         .section-title { font-size: 11px; color: #8e8e93; font-weight: bold; margin: 15px 5px 5px; text-transform: uppercase; }
-        .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f9f9f9; }
+        .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f9f9f9; cursor: pointer; }
         .item:last-child { border-bottom: none; }
-        .btn-blue { background: #007aff; color: #fff; border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; }
+        .btn-blue { background: #007aff; color: #fff; border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; margin-bottom: 5px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
         .t-card { background: #fff; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #eee; font-size: 13px; }
+        .download-links { display: none; padding: 10px 0; background: #fafafa; border-radius: 8px; margin-top: 5px; text-align: center; }
+        .dl-btn { display: inline-block; margin: 5px; color: #007aff; text-decoration: none; font-weight: bold; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="card">
         <h3 id="user-name">...</h3>
-        <p id="status-box" style="font-size: 14px;">Статус: ...</p>
+        <p id="status-box" style="font-size: 14px; color: #555;">Загрузка данных...</p>
     </div>
 
-    <div class="section-title">УЖЕ ЕСТЬ V2RAYTUN ИЛИ HAPP?</div>
-    <div class="card"><button class="btn-blue" onclick="addKey()">Добавить подписку в клиент</button></div>
-
-    <div class="section-title">ПОДКЛЮЧЕНИЕ VPN</div>
+    <div class="section-title">БЫСТРОЕ ПОДКЛЮЧЕНИЕ</div>
     <div class="card">
-        <div class="item" onclick="alert('Скачайте V2RayTun в AppStore/PlayStore')"><span><i class="fa fa-mobile-alt"></i> Установка на Смартфон</span><i class="fa fa-chevron-right"></i></div>
-        <div class="item" onclick="alert('Используйте V2Ray Desktop для Windows')"><span><i class="fa fa-laptop"></i> Установка на ПК</span><i class="fa fa-chevron-right"></i></div>
-        <div class="item" onclick="alert('Настройте на Android TV')"><span><i class="fa fa-tv"></i> Подключить на TV</span><i class="fa fa-chevron-right"></i></div>
+        <button class="btn-blue" onclick="addKey()">1. Копировать ключ</button>
+        <div style="font-size: 12px; color: #888; text-align: center;">После копирования вставьте ключ в приложение</div>
+    </div>
+
+    <div class="section-title">СКАЧАТЬ ПРИЛОЖЕНИЕ (КЛИЕНТ)</div>
+    <div class="card">
+        <div class="item" onclick="toggleDL()">
+            <span><i class="fa fa-mobile-alt" style="color:#007aff; width:20px;"></i> Смартфон (iPhone / Android)</span>
+            <i class="fa fa-chevron-down" id="arrow"></i>
+        </div>
+        <div id="dl-box" class="download-links">
+            <a href="https://apps.apple.com/us/app/v2raytun/id6474102839" class="dl-btn"><i class="fab fa-apple"></i> App Store</a>
+            <a href="https://play.google.com/store/apps/details?id=com.v2raytun.android" class="dl-btn"><i class="fab fa-google-play"></i> Google Play</a>
+        </div>
+        <div class="item" onclick="tg.openLink('https://github.com/v2rayDesktop/v2rayDesktop/releases')">
+            <span><i class="fa fa-laptop" style="color:#007aff; width:20px;"></i> Установка на ПК</span>
+            <i class="fa fa-chevron-right"></i>
+        </div>
     </div>
 
     <div class="section-title">КУПИТЬ ПОДПИСКУ</div>
@@ -38,18 +52,40 @@
     <script>
         let tg = window.Telegram.WebApp;
         let myKey = "";
+        
         async function load() {
-            const r = await fetch(`http://130.49.146.17:8000/user_data/${tg.initDataUnsafe.user.id}`);
-            const j = await r.json();
-            const d = j.data;
-            myKey = d.vpn_key;
-            document.getElementById('user-name').innerText = d.username;
-            document.getElementById('status-box').innerText = "До: " + d.expiry_date;
-            let h = "";
-            d.tariffs.forEach(t => { h += `<div class="t-card" onclick="tg.showAlert('Оплата через бота')"><b>${t.name}</b><br>${t.price_rub}₽</div>`; });
-            document.getElementById('tariffs').innerHTML = h;
+            try {
+                const r = await fetch(`http://130.49.146.17:8000/user_data/${tg.initDataUnsafe.user.id}`);
+                const j = await r.json();
+                const d = j.data;
+                myKey = d.vpn_key;
+                document.getElementById('user-name').innerText = d.username;
+                document.getElementById('status-box').innerText = "Подписка до: " + d.expiry_date;
+                let h = "";
+                d.tariffs.forEach(t => { h += `<div class="t-card" onclick="tg.showAlert('Оплатите в боте')"><b>${t.name}</b><br>${t.price_rub}₽</div>`; });
+                document.getElementById('tariffs').innerHTML = h;
+            } catch(e) { document.getElementById('status-box').innerText = "Ошибка API"; }
         }
-        function addKey() { navigator.clipboard.writeText(myKey); tg.showAlert("Ключ скопирован! Импортируйте его в приложении."); }
+
+        function toggleDL() {
+            let box = document.getElementById('dl-box');
+            let arrow = document.getElementById('arrow');
+            if(box.style.display === "block") {
+                box.style.display = "none";
+                arrow.className = "fa fa-chevron-down";
+            } else {
+                box.style.display = "block";
+                arrow.className = "fa fa-chevron-up";
+            }
+        }
+
+        function addKey() {
+            if(!myKey) return tg.showAlert("Сначала купите подписку!");
+            navigator.clipboard.writeText(myKey).then(() => {
+                tg.showAlert("✅ Ключ скопирован!\n\nТеперь откройте V2RayTun и нажмите '+', затем 'Import from Clipboard'");
+            });
+        }
+
         load(); tg.expand();
     </script>
 </body>
