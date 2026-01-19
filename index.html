@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KeksVPN Cabinet</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0f0f0f;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .card {
+            background: linear-gradient(145deg, #1a1a1a, #222);
+            border-radius: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 350px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff00; box-shadow: 0 0 10px #00ff00; }
+        .user-id { color: #888; font-size: 0.8em; }
+        .balance-val { font-size: 2em; font-weight: bold; margin: 10px 0; color: #fff; }
+        .progress-container { background: #333; border-radius: 10px; height: 12px; margin: 15px 0; overflow: hidden; }
+        .progress-bar { background: linear-gradient(90deg, #007aff, #00ff00); height: 100%; width: 45%; border-radius: 10px; }
+        .stats { display: flex; justify-content: space-between; font-size: 0.9em; color: #aaa; }
+        .btn {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 15px;
+            width: 100%;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn:active { transform: scale(0.98); opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <span id="username">Загрузка...</span>
+            <div class="status-dot" id="status-dot"></div>
+        </div>
+        <div class="user-id">ID: <span id="user-id-val">000000</span></div>
+        <div class="balance-val"><span id="balance">0</span> ₽</div>
+        <div style="color: #888;">Баланс аккаунта</div>
+    </div>
+
+    <div class="card">
+        <div style="margin-bottom: 10px; font-weight: 500;">Использовано трафика</div>
+        <div class="progress-container">
+            <div class="progress-bar" id="traffic-bar" style="width: 0%;"></div>
+        </div>
+        <div class="stats">
+            <span id="traffic-used">0 GB</span>
+            <span id="traffic-limit">100 GB</span>
+        </div>
+    </div>
+
+    <div class="card" style="text-align: center;">
+        <div style="color: #00ff00; font-size: 1.5em; font-weight: bold;" id="days-left">0</div>
+        <div style="color: #888;">дней подписки осталось</div>
+    </div>
+
+    <button class="btn" onclick="window.Telegram.WebApp.close()">Вернуться в бот</button>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Развернуть на весь экран
+
+        const API_URL = "http://130.49.146.17:8000"; // ЗАМЕНИ НА СВОЙ IP
+        const userId = tg.initDataUnsafe.user.id;
+
+        async function loadData() {
+            try {
+                const response = await fetch(`${API_URL}/user_data/${userId}`);
+                const result = await response.json();
+                
+                if (result.status === "success") {
+                    const data = result.data;
+                    document.getElementById('username').innerText = data.username;
+                    document.getElementById('user-id-val').innerText = userId;
+                    document.getElementById('balance').innerText = data.balance;
+                    document.getElementById('days-left').innerText = data.days_left;
+                    
+                    // Трафик
+                    const percent = (data.traffic_used / data.traffic_limit) * 100;
+                    document.getElementById('traffic-bar').style.width = percent + "%";
+                    document.getElementById('traffic-used').innerText = data.traffic_used + " GB";
+                    
+                    if (!data.is_active) {
+                        document.getElementById('status-dot').style.background = 'red';
+                        document.getElementById('status-dot').style.boxShadow = '0 0 10px red';
+                    }
+                }
+            } catch (e) {
+                console.error("Ошибка загрузки данных", e);
+            }
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
