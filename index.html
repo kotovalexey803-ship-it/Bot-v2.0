@@ -6,77 +6,51 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { font-family: sans-serif; background: #f4f4f5; margin: 0; padding: 15px; color: #000; }
-        .card { background: #fff; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .section-title { font-size: 12px; color: #8e8e93; font-weight: bold; margin: 10px 5px; text-transform: uppercase; }
-        .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
-        .menu-item:last-child { border-bottom: none; }
-        .menu-item i { color: #3390ec; width: 25px; }
-        .btn-add { background: #3390ec; color: #fff; border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; margin-top: 10px; }
-        .tariff-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-        .t-card { background: #fff; padding: 10px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
+        body { font-family: sans-serif; background: #f4f4f5; padding: 15px; }
+        .card { background: #fff; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #eee; }
+        .section-title { font-size: 11px; color: #8e8e93; font-weight: bold; margin: 15px 5px 5px; text-transform: uppercase; }
+        .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f9f9f9; }
+        .item:last-child { border-bottom: none; }
+        .btn-blue { background: #007aff; color: #fff; border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .t-card { background: #fff; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #eee; font-size: 13px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h3 id="user-name">Загрузка...</h3>
-        <p>Статус: <span id="status">...</span></p>
-        <p>До: <span id="expiry">...</span></p>
+        <h3 id="user-name">...</h3>
+        <p id="status-box" style="font-size: 14px;">Статус: ...</p>
     </div>
 
     <div class="section-title">УЖЕ ЕСТЬ V2RAYTUN ИЛИ HAPP?</div>
-    <div class="card">
-        <button class="btn-add" onclick="copyAndOpen()">Добавить подписку в клиент</button>
-    </div>
+    <div class="card"><button class="btn-blue" onclick="addKey()">Добавить подписку в клиент</button></div>
 
     <div class="section-title">ПОДКЛЮЧЕНИЕ VPN</div>
     <div class="card">
-        <div class="menu-item" onclick="alert('Инструкция для iOS/Android')">
-            <div><i class="fa fa-mobile-alt"></i> Установка на Смартфон</div>
-            <i class="fa fa-chevron-right" style="color:#ccc"></i>
-        </div>
-        <div class="menu-item" onclick="alert('Инструкция для ПК')">
-            <div><i class="fa fa-laptop"></i> Установка на ПК</div>
-            <i class="fa fa-chevron-right" style="color:#ccc"></i>
-        </div>
-        <div class="menu-item" onclick="alert('Инструкция для TV')">
-            <div><i class="fa fa-tv"></i> Подключить на TV</div>
-            <i class="fa fa-chevron-right" style="color:#ccc"></i>
-        </div>
+        <div class="item" onclick="alert('Скачайте V2RayTun в AppStore/PlayStore')"><span><i class="fa fa-mobile-alt"></i> Установка на Смартфон</span><i class="fa fa-chevron-right"></i></div>
+        <div class="item" onclick="alert('Используйте V2Ray Desktop для Windows')"><span><i class="fa fa-laptop"></i> Установка на ПК</span><i class="fa fa-chevron-right"></i></div>
+        <div class="item" onclick="alert('Настройте на Android TV')"><span><i class="fa fa-tv"></i> Подключить на TV</span><i class="fa fa-chevron-right"></i></div>
     </div>
 
     <div class="section-title">КУПИТЬ ПОДПИСКУ</div>
-    <div id="tariffs" class="tariff-grid"></div>
+    <div id="tariffs" class="grid"></div>
 
     <script>
         let tg = window.Telegram.WebApp;
-        let vpnKey = "";
-        const API_URL = "http://130.49.146.17:8000";
-
-        async function init() {
-            const res = await fetch(`${API_URL}/user_data/${tg.initDataUnsafe.user.id}`);
-            const json = await res.json();
-            const d = json.data;
-            vpnKey = d.vpn_key;
-            
+        let myKey = "";
+        async function load() {
+            const r = await fetch(`http://130.49.146.17:8000/user_data/${tg.initDataUnsafe.user.id}`);
+            const j = await r.json();
+            const d = j.data;
+            myKey = d.vpn_key;
             document.getElementById('user-name').innerText = d.username;
-            document.getElementById('status').innerText = d.is_active ? "Активна" : "Истекла";
-            document.getElementById('expiry').innerText = d.expiry_date;
-
-            let html = "";
-            d.tariffs.forEach(t => {
-                html += `<div class="t-card" onclick="buy('${t.id}')"><b>${t.name}</b><br>${t.price_rub}₽</div>`;
-            });
-            document.getElementById('tariffs').innerHTML = html;
+            document.getElementById('status-box').innerText = "До: " + d.expiry_date;
+            let h = "";
+            d.tariffs.forEach(t => { h += `<div class="t-card" onclick="tg.showAlert('Оплата через бота')"><b>${t.name}</b><br>${t.price_rub}₽</div>`; });
+            document.getElementById('tariffs').innerHTML = h;
         }
-
-        function copyAndOpen() {
-            navigator.clipboard.writeText(vpnKey);
-            tg.showAlert("Ключ скопирован! Откройте V2RayTun и нажмите '+', затем 'Import from Clipboard'");
-        }
-
-        function buy(id) { tg.showConfirm("Перейти к оплате?"); }
-        init();
+        function addKey() { navigator.clipboard.writeText(myKey); tg.showAlert("Ключ скопирован! Импортируйте его в приложении."); }
+        load(); tg.expand();
     </script>
 </body>
 </html>
