@@ -31,7 +31,7 @@
         .user-id { color: #888; font-size: 0.8em; }
         .balance-val { font-size: 2em; font-weight: bold; margin: 10px 0; color: #fff; }
         .progress-container { background: #333; border-radius: 10px; height: 12px; margin: 15px 0; overflow: hidden; }
-        .progress-bar { background: linear-gradient(90deg, #007aff, #00ff00); height: 100%; width: 45%; border-radius: 10px; }
+        .progress-bar { background: linear-gradient(90deg, #007aff, #00ff00); height: 100%; width: 0%; border-radius: 10px; transition: width 0.5s ease; }
         .stats { display: flex; justify-content: space-between; font-size: 0.9em; color: #aaa; }
         .btn {
             background: #007aff;
@@ -40,6 +40,7 @@
             padding: 15px;
             border-radius: 15px;
             width: 100%;
+            max-width: 350px;
             font-weight: bold;
             font-size: 1em;
             cursor: pointer;
@@ -62,7 +63,7 @@
     <div class="card">
         <div style="margin-bottom: 10px; font-weight: 500;">Использовано трафика</div>
         <div class="progress-container">
-            <div class="progress-bar" id="traffic-bar" style="width: 0%;"></div>
+            <div class="progress-bar" id="traffic-bar"></div>
         </div>
         <div class="stats">
             <span id="traffic-used">0 GB</span>
@@ -79,10 +80,13 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Развернуть на весь экран
+        tg.expand(); 
 
-        const API_URL = "http://130.49.146.17:8000"; // ЗАМЕНИ НА СВОЙ IP
-        const userId = tg.initDataUnsafe.user.id;
+        // Твой IP сервера и порт API
+        const API_URL = "http://130.49.146.17:8000"; 
+        
+        // Получаем ID пользователя из Telegram
+        const userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : "7777777"; 
 
         async function loadData() {
             try {
@@ -91,23 +95,26 @@
                 
                 if (result.status === "success") {
                     const data = result.data;
-                    document.getElementById('username').innerText = data.username;
+                    document.getElementById('username').innerText = data.username || "User";
                     document.getElementById('user-id-val').innerText = userId;
                     document.getElementById('balance').innerText = data.balance;
                     document.getElementById('days-left').innerText = data.days_left;
                     
-                    // Трафик
+                    // Расчет прогресс-бара трафика
                     const percent = (data.traffic_used / data.traffic_limit) * 100;
                     document.getElementById('traffic-bar').style.width = percent + "%";
                     document.getElementById('traffic-used').innerText = data.traffic_used + " GB";
+                    document.getElementById('traffic-limit').innerText = data.traffic_limit + " GB";
                     
+                    // Если подписка кончилась — точка станет красной
                     if (!data.is_active) {
                         document.getElementById('status-dot').style.background = 'red';
                         document.getElementById('status-dot').style.boxShadow = '0 0 10px red';
                     }
                 }
             } catch (e) {
-                console.error("Ошибка загрузки данных", e);
+                console.error("Ошибка загрузки данных через API:", e);
+                document.getElementById('username').innerText = "Ошибка API";
             }
         }
 
