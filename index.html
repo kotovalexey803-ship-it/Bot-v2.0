@@ -3,119 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KeksVPN Cabinet</title>
+    <title>Kraft VPN Cabinet</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        :root {
+            --tg-theme-bg-color: #fff;
+            --tg-theme-text-color: #000;
+            --tg-theme-button-color: #3390ec;
+            --tg-theme-secondary-bg-color: #f4f4f5;
+        }
         body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #0f0f0f;
-            color: white;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-secondary-bg-color);
+            color: var(--tg-theme-text-color);
+            margin: 0; padding: 16px;
         }
         .card {
-            background: linear-gradient(145deg, #1a1a1a, #222);
-            border-radius: 20px;
+            background: var(--tg-theme-bg-color);
+            border-radius: 16px;
             padding: 20px;
-            width: 100%;
-            max-width: 350px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            margin-bottom: 20px;
-            border: 1px solid #333;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
-        .header { display: flex; justify-content: space-between; align-items: center; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff00; box-shadow: 0 0 10px #00ff00; }
-        .user-id { color: #888; font-size: 0.8em; }
-        .balance-val { font-size: 2em; font-weight: bold; margin: 10px 0; color: #fff; }
-        .progress-container { background: #333; border-radius: 10px; height: 12px; margin: 15px 0; overflow: hidden; }
-        .progress-bar { background: linear-gradient(90deg, #007aff, #00ff00); height: 100%; width: 0%; border-radius: 10px; transition: width 0.5s ease; }
-        .stats { display: flex; justify-content: space-between; font-size: 0.9em; color: #aaa; }
-        .btn {
-            background: #007aff;
+        .status-badge {
+            float: right;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            background: #ffebee; color: #ef5350; /* По умолчанию "Истекла" */
+        }
+        .tariff-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 10px;
+        }
+        .btn-buy {
+            background: var(--tg-theme-button-color);
             color: white;
             border: none;
-            padding: 15px;
-            border-radius: 15px;
-            width: 100%;
-            max-width: 350px;
+            padding: 8px 16px;
+            border-radius: 8px;
             font-weight: bold;
-            font-size: 1em;
-            cursor: pointer;
-            transition: 0.3s;
         }
-        .btn:active { transform: scale(0.98); opacity: 0.8; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <div class="header">
-            <span id="username">Загрузка...</span>
-            <div class="status-dot" id="status-dot"></div>
-        </div>
-        <div class="user-id">ID: <span id="user-id-val">000000</span></div>
-        <div class="balance-val"><span id="balance">0</span> ₽</div>
-        <div style="color: #888;">Баланс аккаунта</div>
-    </div>
 
     <div class="card">
-        <div style="margin-bottom: 10px; font-weight: 500;">Использовано трафика</div>
-        <div class="progress-container">
-            <div class="progress-bar" id="traffic-bar"></div>
+        <span id="status-text" class="status-badge">Неактивна</span>
+        <h2 style="margin-top: 0;">Подписка</h2>
+        <p><i class="fa fa-user"></i> <span id="user-name">Загрузка...</span></p>
+        <div style="background: #eee; height: 8px; border-radius: 4px;">
+            <div id="traffic-bar" style="background: var(--tg-theme-button-color); width: 0%; height: 100%; border-radius: 4px;"></div>
         </div>
-        <div class="stats">
-            <span id="traffic-used">0 GB</span>
-            <span id="traffic-limit">100 GB</span>
-        </div>
+        <p style="font-size: 12px; color: gray;">Использовано: <span id="traffic-text">0 / 100 GB</span></p>
     </div>
 
-    <div class="card" style="text-align: center;">
-        <div style="color: #00ff00; font-size: 1.5em; font-weight: bold;" id="days-left">0</div>
-        <div style="color: #888;">дней подписки осталось</div>
-    </div>
-
-    <button class="btn" onclick="window.Telegram.WebApp.close()">Вернуться в бот</button>
+    <h3>Выберите тариф</h3>
+    <div id="tariffs-container">
+        </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); 
-
-        // Твой IP сервера и порт API
-        const API_URL = "http://130.49.146.17:8000"; 
-        
-        // Получаем ID пользователя из Telegram
-        const userId = tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : "7777777"; 
+        tg.expand();
+        const API_URL = "http://130.49.146.17:8000"; // ТВОЙ IP
 
         async function loadData() {
+            const userId = tg.initDataUnsafe.user.id;
+            document.getElementById('user-name').innerText = tg.initDataUnsafe.user.first_name;
+            
             try {
                 const response = await fetch(`${API_URL}/user_data/${userId}`);
-                const result = await response.json();
+                const data = await response.json();
                 
-                if (result.status === "success") {
-                    const data = result.data;
-                    document.getElementById('username').innerText = data.username || "User";
-                    document.getElementById('user-id-val').innerText = userId;
-                    document.getElementById('balance').innerText = data.balance;
-                    document.getElementById('days-left').innerText = data.days_left;
-                    
-                    // Расчет прогресс-бара трафика
-                    const percent = (data.traffic_used / data.traffic_limit) * 100;
-                    document.getElementById('traffic-bar').style.width = percent + "%";
-                    document.getElementById('traffic-used').innerText = data.traffic_used + " GB";
-                    document.getElementById('traffic-limit').innerText = data.traffic_limit + " GB";
-                    
-                    // Если подписка кончилась — точка станет красной
-                    if (!data.is_active) {
-                        document.getElementById('status-dot').style.background = 'red';
-                        document.getElementById('status-dot').style.boxShadow = '0 0 10px red';
-                    }
-                }
+                // Отрисовка тарифов
+                const container = document.getElementById('tariffs-container');
+                data.tariffs.forEach(t => {
+                    container.innerHTML += `
+                        <div class="tariff-card">
+                            <div>
+                                <b>${t.name}</b><br>
+                                <small>${t.desc}</small>
+                            </div>
+                            <button class="btn-buy" onclick="buyStars('${t.id}', ${t.price_stars})">
+                                <i class="fa fa-star"></i> ${t.price_stars}
+                            </button>
+                        </div>
+                    `;
+                });
             } catch (e) {
-                console.error("Ошибка загрузки данных через API:", e);
-                document.getElementById('username').innerText = "Ошибка API";
+                console.error("Ошибка связи с API");
             }
+        }
+
+        function buyStars(id, price) {
+            // Здесь бот должен отправить инвойс через API
+            tg.showConfirm(`Купить тариф за ${price} звёзд?`);
         }
 
         loadData();
