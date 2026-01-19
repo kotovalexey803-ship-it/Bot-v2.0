@@ -6,7 +6,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f4f4f7; margin: 0; padding: 15px; color: #000; }
+        body { font-family: -apple-system, sans-serif; background: #f4f4f7; padding: 15px; margin: 0; color: #000; }
         .card { background: #fff; border-radius: 14px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .section-title { font-size: 11px; color: #8e8e93; font-weight: bold; margin: 15px 5px 8px; text-transform: uppercase; }
         .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f2f2f2; cursor: pointer; }
@@ -14,30 +14,30 @@
         .btn-main { background: #007aff; color: #fff; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 15px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
         .t-card { background: #fff; padding: 12px 5px; border-radius: 12px; text-align: center; border: 1px solid #eee; font-size: 13px; font-weight: bold; }
-        .dl-links { display: none; padding: 10px; background: #f9f9f9; border-radius: 10px; margin-top: 5px; text-align: center; }
-        .dl-links a { color: #007aff; text-decoration: none; margin: 0 10px; font-size: 14px; font-weight: bold; }
+        .dl-box { display: none; padding: 12px; background: #f9f9f9; border-radius: 10px; margin-top: 5px; text-align: center; }
+        .dl-link { color: #007aff; text-decoration: none; margin: 0 10px; font-weight: bold; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2 id="user-name" style="margin:0; font-size: 20px;">...</h2>
-        <div id="status" style="margin-top: 5px; color: #555;">Загрузка...</div>
+        <div id="status" style="margin-top: 5px; color: #555; font-size: 14px;">Загрузка данных...</div>
     </div>
 
-    <div class="section-title">УЖЕ ЕСТЬ V2RAYTUN ИЛИ HAPP?</div>
+    <div class="section-title">БЫСТРОЕ ПОДКЛЮЧЕНИЕ</div>
     <div class="card">
         <button class="btn-main" onclick="copyKey()">1. Копировать ключ доступа</button>
     </div>
 
-    <div class="section-title">ПОДКЛЮЧЕНИЕ VPN</div>
+    <div class="section-title">СКАЧАТЬ ПРИЛОЖЕНИЕ (КЛИЕНТ)</div>
     <div class="card">
         <div class="item" onclick="toggleDL()">
-            <span><i class="fa fa-mobile-screen" style="color:#007aff; margin-right:10px;"></i> Установка на Смартфон</span>
+            <span><i class="fa fa-mobile-screen" style="color:#007aff; margin-right:10px;"></i> Смартфон (iPhone / Android)</span>
             <i class="fa fa-chevron-down" id="arrow"></i>
         </div>
-        <div id="dl-box" class="dl-links">
-            <a href="https://apps.apple.com/us/app/v2raytun/id6474102839"><i class="fab fa-apple"></i> iOS</a>
-            <a href="https://play.google.com/store/apps/details?id=com.v2raytun.android"><i class="fab fa-android"></i> Android</a>
+        <div id="dl-box" class="dl-box">
+            <a href="https://apps.apple.com/us/app/v2raytun/id6474102839" class="dl-link"><i class="fab fa-apple"></i> App Store</a>
+            <a href="https://play.google.com/store/apps/details?id=com.v2raytun.android" class="dl-link"><i class="fab fa-android"></i> Play Store</a>
         </div>
         <div class="item" onclick="tg.openLink('https://github.com/v2rayDesktop/v2rayDesktop/releases')">
             <span><i class="fa fa-laptop" style="color:#007aff; margin-right:10px;"></i> Установка на ПК</span>
@@ -56,16 +56,16 @@
             try {
                 const r = await fetch(`http://130.49.146.17:8000/user_data/${tg.initDataUnsafe.user.id}`);
                 const j = await r.json();
-                vpnKey = j.data.vpn_key;
+                vpnKey = j.data.vpn_key || "vless://default_key";
                 document.getElementById('user-name').innerText = j.data.username;
-                document.getElementById('status').innerText = "Подписка до: " + j.data.expiry_date;
+                document.getElementById('status').innerText = "Подписка активна до: " + j.data.expiry_date;
                 
                 let h = "";
                 j.data.tariffs.forEach(t => {
-                    h += `<div class="t-card" onclick="tg.showAlert('Для оплаты используйте меню бота')">${t.name}<br><span style="color:#007aff">${t.price_rub}₽</span></div>`;
+                    h += `<div class="t-card" onclick="tg.showAlert('Оплатите в меню бота')">${t.name}<br><span style="color:#007aff">${t.price_rub}₽</span></div>`;
                 });
                 document.getElementById('tariffs').innerHTML = h;
-            } catch(e) { document.getElementById('status').innerText = "Ошибка сервера"; }
+            } catch(e) { document.getElementById('status').innerText = "Ошибка API"; }
         }
 
         function toggleDL() {
@@ -74,9 +74,8 @@
         }
 
         function copyKey() {
-            if(!vpnKey) return tg.showAlert("Сначала купите подписку");
             navigator.clipboard.writeText(vpnKey);
-            tg.showAlert("✅ Ключ скопирован!\nТеперь вставьте его в приложение V2RayTun.");
+            tg.showAlert("✅ Ключ скопирован!\nТеперь откройте V2RayTun и добавьте его.");
         }
 
         load(); tg.expand();
