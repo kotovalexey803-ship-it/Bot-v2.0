@@ -1,88 +1,170 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { font-family: sans-serif; background: #f4f4f7; margin: 0; padding: 15px; }
-        .card { background: #fff; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .section-title { font-size: 11px; color: #8e8e93; font-weight: bold; margin: 10px 5px; text-transform: uppercase; }
-        .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f5; text-decoration: none; color: #000; }
-        .menu-item:last-child { border-bottom: none; }
-        .btn-copy { background: #007aff; color: #fff; border: none; width: 100%; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; cursor: pointer; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .t-card { background: #fff; padding: 12px 5px; border-radius: 12px; text-align: center; border: 1px solid #eee; }
-        i { color: #007aff; margin-right: 10px; }
-    </style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <title>Keks VPN</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial;margin:0;background:#f5f6f8;color:#111}
+    .wrap{padding:14px}
+    .card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:12px}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .title{font-size:22px;font-weight:900;margin:0}
+    .muted{color:#6b7280;font-size:13px;line-height:1.25}
+    .badge{padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px}
+    .ok{background:#e8fff2;color:#0f8a3b}
+    .bad{background:#ffe8ea;color:#c20d1a}
+    .btn{width:100%;border:0;border-radius:14px;padding:14px;font-weight:900;font-size:16px}
+    .btn-primary{background:#1677ff;color:#fff}
+    .btn-ghost{background:#eef2ff;color:#1f2a44}
+    .list{margin-top:10px}
+    .item{padding:14px 6px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+    .item:first-child{border-top:0}
+    .bar{height:10px;background:#eef0f3;border-radius:999px;overflow:hidden}
+    .bar > div{height:100%;background:#1677ff;width:0%}
+    .small{font-size:12px;color:#6b7280}
+    .danger{color:#c20d1a;font-weight:900}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;word-break:break-all}
+  </style>
 </head>
 <body>
-    <div class="card">
-        <h2 id="user-name">Загрузка...</h2>
-        <div id="status" style="font-weight: bold; color: #007aff;">Подключение...</div>
+<div class="wrap">
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <div class="title">Подписка</div>
+        <div class="muted">Пользователь: <b id="user">—</b></div>
+      </div>
+      <div id="active" class="badge">—</div>
     </div>
 
-    <div class="section-title">Уже есть V2rayTun?</div>
-    <div class="card">
-        <button class="btn-copy" onclick="copyKey()">Скопировать ключ</button>
+    <div style="margin-top:10px" class="card" id="statusCard" style="padding:12px">
+      <div class="muted">Статус</div>
+      <div style="font-size:18px;font-weight:900" id="statusText">—</div>
+      <div class="muted">до: <b id="exp">—</b></div>
     </div>
 
-    <div class="section-title">Подключение VPN</div>
-    <div class="card">
-        <a href="https://apps.apple.com/us/app/v2raytun/id6474102839" target="_blank" class="menu-item">
-            <span><i class="fab fa-apple"></i> iPhone (iOS)</span>
-            <i class="fas fa-chevron-right" style="color:#ccc"></i>
-        </a>
-        <a href="https://play.google.com/store/apps/details?id=com.v2raytun.android" target="_blank" class="menu-item">
-            <span><i class="fab fa-android"></i> Android</span>
-            <i class="fas fa-chevron-right" style="color:#ccc"></i>
-        </a>
-        <a href="https://github.com/v2rayDesktop/v2rayDesktop/releases" target="_blank" class="menu-item">
-            <span><i class="fas fa-laptop"></i> Windows / PC</span>
-            <i class="fas fa-chevron-right" style="color:#ccc"></i>
-        </a>
+    <div style="margin-top:10px">
+      <div class="row">
+        <div class="muted">Лимит устройств</div>
+        <div style="font-weight:900" id="limit">—</div>
+      </div>
+      <div class="small" style="margin-top:6px">Если вы меняли лимит в админке — здесь будет актуальное значение.</div>
     </div>
+  </div>
 
-    <div class="section-title">Тарифы</div>
-    <div id="tariffs" class="grid"></div>
+  <div class="card">
+    <div class="muted" style="margin-bottom:10px">Уже есть v2RayTun или Happ?</div>
+    <button class="btn btn-primary" onclick="openRedirect()">Добавить подписку</button>
+    <div style="height:10px"></div>
+    <button class="btn btn-ghost" onclick="copySub()">Скопировать ссылку</button>
+    <div style="height:10px"></div>
+    <button class="btn btn-ghost" onclick="openQr()">Показать QR-код</button>
 
-    <script>
-        let tg = window.Telegram.WebApp;
-        let vpnKey = "";
+    <div style="margin-top:12px" class="small">
+      Если приложение не открылось автоматически — используйте «Скопировать ссылку» или QR и импортируйте вручную.
+    </div>
+  </div>
 
-        async function loadData() {
-            try {
-                // Добавляем случайное число к ссылке, чтобы обойти кэш
-                const url = `http://130.49.146.17:8000/user_data/${tg.initDataUnsafe.user.id}?t=${Date.now()}`;
-                const res = await fetch(url);
-                const json = await res.json();
-                
-                if (json.status === "success") {
-                    const d = json.data;
-                    vpnKey = d.vpn_key;
-                    document.getElementById('user-name').innerText = d.username;
-                    document.getElementById('status').innerText = "Подписка до: " + d.expiry_date;
-                    
-                    let html = "";
-                    d.tariffs.forEach(t => {
-                        html += `<div class="t-card"><b>${t.name}</b><br><span style="color:#007aff">${t.price}</span></div>`;
-                    });
-                    document.getElementById('tariffs').innerHTML = html;
-                }
-            } catch (e) {
-                document.getElementById('status').innerText = "Ошибка: Откройте в браузере";
-                document.getElementById('status').style.color = "red";
-            }
-        }
+  <div class="card">
+    <div class="muted">Подключение VPN</div>
+    <div class="list">
+      <div class="item" onclick="installPhone()"><div>Установка на Смартфон</div><div>›</div></div>
+      <div class="item" onclick="installPC()"><div>Установка на ПК</div><div>›</div></div>
+      <div class="item" onclick="installTV()"><div>Подключить на TV</div><div>›</div></div>
+    </div>
+  </div>
 
-        function copyKey() {
-            navigator.clipboard.writeText(vpnKey);
-            tg.showAlert("✅ Ключ скопирован!");
-        }
+  <div class="card">
+    <div class="muted">Диагностика</div>
+    <div class="small">Если что-то не грузится — чаще всего проблема в HTTPS на API.</div>
+    <div class="small">API: <span class="mono" id="apiText">—</span></div>
+    <div class="small">initData: <span class="mono" id="initLen">—</span></div>
+  </div>
 
-        tg.expand();
-        loadData();
-    </script>
+</div>
+
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+
+  // ВАЖНО: сюда вставишь свой HTTPS домен (ниже я дам готовый nginx + certbot)
+  const API_BASE = "https://YOUR_DOMAIN";
+
+  document.getElementById("apiText").innerText = API_BASE;
+  document.getElementById("initLen").innerText = String((tg.initData || "").length);
+
+  let subUrl = "";
+  let qrUrl = "";
+  let redirectUrl = "";
+
+  async function load() {
+    try {
+      const r = await fetch(`${API_BASE}/api/me`, {
+        headers: { "X-Tg-Init-Data": tg.initData }
+      });
+
+      const j = await r.json();
+      if (!j || j.status !== "success") throw new Error(j?.message || "bad_response");
+
+      const d = j.data;
+
+      document.getElementById("user").innerText = d.username || "—";
+
+      const badge = document.getElementById("active");
+      if (d.is_active) { badge.className = "badge ok"; badge.innerText = "Активна"; }
+      else { badge.className = "badge bad"; badge.innerText = "Неактивна"; }
+
+      document.getElementById("statusText").innerText = d.is_active ? "Подписка активна" : "Подписка истекла";
+      document.getElementById("exp").innerText = d.expiry_date || "—";
+      document.getElementById("limit").innerText = String(d.device_limit ?? "—");
+
+      subUrl = d.sub_url || "";
+      redirectUrl = d.redirect_url || "";
+      qrUrl = d.qr_url || "";
+
+    } catch (e) {
+      tg.showAlert("Не удалось загрузить данные. Проверьте: API доступен по HTTPS и запущен.");
+    }
+  }
+
+  function openRedirect() {
+    if (!redirectUrl) return tg.showAlert("Ссылка ещё не готова.");
+    window.location.href = redirectUrl;
+  }
+
+  async function copySub() {
+    if (!subUrl) return tg.showAlert("Ссылка ещё не готова.");
+    await navigator.clipboard.writeText(subUrl);
+    tg.showAlert("Ссылка скопирована.");
+  }
+
+  function openQr() {
+    if (!qrUrl) return tg.showAlert("QR ещё не готов.");
+    window.open(qrUrl, "_blank");
+  }
+
+  function installPhone() {
+    tg.showPopup({
+      title:"Установка на смартфон",
+      message:"1) Установите приложение\n2) Нажмите «Добавить подписку» или импортируйте ссылку/QR",
+      buttons:[
+        {id:"ios", type:"default", text:"iOS"},
+        {id:"and", type:"default", text:"Android"},
+        {type:"close"}
+      ]
+    }, (id) => {
+      if (id === "ios") window.open("https://apps.apple.com/", "_blank");
+      if (id === "and") window.open("https://play.google.com/store", "_blank");
+    });
+  }
+
+  function installPC() { tg.showAlert("Дальше добавим готовые инструкции под твой стек (Windows/macOS)."); }
+  function installTV() { tg.showAlert("Дальше добавим подключение TV (Android TV/Apple TV)."); }
+
+  load();
+</script>
 </body>
 </html>
