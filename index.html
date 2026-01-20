@@ -1,148 +1,99 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>KraftVPN</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KraftVPN Mini App</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body { font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial; margin: 0; padding: 16px; background:#f6f7fb; }
-    .card { background:#fff; border-radius:16px; padding:16px; box-shadow:0 6px 24px rgba(0,0,0,.08); margin-bottom:12px; }
-    .row { display:flex; justify-content:space-between; gap:12px; }
-    .muted { color:#6b7280; font-size:14px; }
-    .big { font-size:22px; font-weight:700; }
-    .btn { width:100%; border:0; border-radius:12px; padding:14px 12px; font-size:16px; font-weight:600; cursor:pointer; }
-    .btn-primary { background:#2f7df6; color:#fff; }
-    .btn-secondary { background:#eef2ff; color:#1f2a44; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:13px; word-break:break-all; }
-    .error { color:#b42318; font-weight:700; }
-    .ok { color:#067647; font-weight:700; }
-    .hidden { display:none; }
+    body { font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial; margin: 16px; }
+    .err { color: #b00020; font-weight: 600; }
+    .ok { color: #0a7f2e; font-weight: 600; }
+    button { padding: 10px 14px; border-radius: 10px; border: 0; cursor: pointer; }
   </style>
 </head>
-
 <body>
-  <div class="card">
-    <div class="row">
-      <div>
-        <div class="big">Подписка</div>
-        <div class="muted" id="userLine">Пользователь: —</div>
-      </div>
-      <div class="big" id="planLine">—</div>
-    </div>
+  <div id="app">
+    <div id="status">Загрузка…</div>
+    <pre id="debug" style="white-space:pre-wrap;background:#f6f7f8;padding:10px;border-radius:10px;"></pre>
+    <button id="retry" style="display:none;margin-top:10px;">Повторить</button>
   </div>
 
-  <div class="card">
-    <div class="muted">Статус</div>
-    <div class="big" id="statusLine">—</div>
-    <div class="muted" style="margin-top:6px;">до: <span id="untilLine">—</span></div>
-    <div class="muted" style="margin-top:6px;">Лимит устройств: <span id="devicesLine">—</span></div>
-  </div>
+  <script>
+    const API_BASE = "https://api.blogyoga.site";
 
-  <div class="card" id="linksCard">
-    <button class="btn btn-primary" id="btnCopy" disabled>Скопировать ссылку</button>
-    <div style="height:10px"></div>
-    <button class="btn btn-secondary" id="btnOpen" disabled>Открыть в приложении</button>
-    <div style="height:10px"></div>
-    <div class="muted">Ссылка (если нужно вручную):</div>
-    <div class="mono" id="subUrl">—</div>
-  </div>
+    const statusEl = document.getElementById("status");
+    const debugEl  = document.getElementById("debug");
+    const retryBtn = document.getElementById("retry");
 
-  <div class="card" id="msgCard">
-    <div id="msg" class="muted">Загрузка…</div>
-  </div>
-
-<script>
-  const API_BASE = "https://api.blogyoga.site";
-
-  function setMsg(text, cls) {
-    const el = document.getElementById("msg");
-    el.className = cls || "muted";
-    el.textContent = text;
-  }
-
-  async function loadMe() {
-    if (!window.Telegram || !Telegram.WebApp) {
-      setMsg("Откройте мини-приложение внутри Telegram (нужно initData).", "error");
-      return;
+    function setStatus(text, isError=false) {
+      statusEl.textContent = text;
+      statusEl.className = isError ? "err" : "ok";
     }
 
-    Telegram.WebApp.ready();
-    Telegram.WebApp.expand();
+    async function loadMe() {
+      retryBtn.style.display = "none";
+      setStatus("Загрузка…", false);
+      debugEl.textContent = "";
 
-    const initData = Telegram.WebApp.initData || "";
-    if (!initData) {
-      setMsg("initData пустой. Откройте мини-приложение из чата с ботом.", "error");
-      return;
-    }
+      // Telegram WebApp object
+      const tg = window.Telegram?.WebApp;
 
-    try {
-      const r = await fetch(`${API_BASE}/api/me`, {
-        method: "GET",
-        headers: {
-          "X-Tg-Init-Data": initData
-        }
-      });
-
-      const text = await r.text();
-      let data = null;
-      try { data = JSON.parse(text); } catch(e) {}
-
-      if (!r.ok) {
-        // Самая частая ситуация у тебя сейчас:
-        if (r.status === 404 && data && data.detail === "user_not_found") {
-          setMsg("Пользователь не найден. Нажмите /start в боте и откройте мини-приложение снова.", "error");
-          return;
-        }
-        setMsg(`Ошибка API: HTTP ${r.status} ${data?.detail ? (": " + data.detail) : ""}`, "error");
+      if (!tg) {
+        setStatus("Ошибка: telegram-web-app.js не загрузился", true);
         return;
       }
 
-      // Ожидаем, что API вернет хотя бы user и ссылки.
-      const user = data.user || data.tg_user || {};
-      const subUrl = data.sub_url || data.subUrl || "";
-      const openUrl = data.redirect_url || data.open_url || data.openUrl || "";
+      // На всякий случай разворачиваем MiniApp и сообщаем Telegram, что готовы
+      try { tg.ready(); tg.expand(); } catch (e) {}
 
-      document.getElementById("userLine").textContent =
-        "Пользователь: " + (user.username ? ("@" + user.username) : (user.first_name || user.id || "—"));
+      const initData = tg.initData || ""; // строка initData (подпись + user + auth_date и т.д.)
+      const unsafeUser = tg.initDataUnsafe?.user;
 
-      document.getElementById("planLine").textContent = data.plan || "—";
-      document.getElementById("statusLine").textContent = data.status || "—";
-      document.getElementById("untilLine").textContent = data.until || data.expires_at || "—";
-      document.getElementById("devicesLine").textContent = data.devices_limit ?? data.devices ?? "—";
-
-      document.getElementById("subUrl").textContent = subUrl || "—";
-
-      const btnCopy = document.getElementById("btnCopy");
-      const btnOpen = document.getElementById("btnOpen");
-
-      if (subUrl) {
-        btnCopy.disabled = false;
-        btnCopy.onclick = async () => {
-          try {
-            await navigator.clipboard.writeText(subUrl);
-            setMsg("Ссылка скопирована.", "ok");
-          } catch (e) {
-            setMsg("Не удалось скопировать. Скопируйте вручную из блока ниже.", "error");
-          }
-        };
+      // Если initData пустой — значит открыли НЕ внутри Telegram WebApp
+      if (!initData) {
+        setStatus("Откройте мини-приложение внутри Telegram (нет initData).", true);
+        debugEl.textContent = "initData пустой. Проверь: Web App открыт через кнопку/меню бота, не через обычный браузер.";
+        retryBtn.style.display = "inline-block";
+        return;
       }
 
-      if (openUrl) {
-        btnOpen.disabled = false;
-        btnOpen.onclick = () => {
-          // Открываем через Telegram
-          Telegram.WebApp.openLink(openUrl);
-        };
-      }
+      // Запрос в API: передаём initData в заголовке (надёжный вариант)
+      try {
+        const r = await fetch(`${API_BASE}/api/me`, {
+          method: "GET",
+          headers: {
+            "X-Telegram-InitData": initData
+          },
+          cache: "no-store"
+        });
 
-      setMsg("Данные загружены.", "ok");
-    } catch (e) {
-      setMsg("Не удалось подключиться к API. Проверьте HTTPS и доступность api.blogyoga.site.", "error");
+        const text = await r.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+        debugEl.textContent =
+          `HTTP ${r.status}\n` +
+          `tg.user: ${unsafeUser ? (unsafeUser.id + " @" + (unsafeUser.username || "")) : "n/a"}\n` +
+          `response: ${JSON.stringify(data, null, 2)}`;
+
+        if (!r.ok) {
+          setStatus(`Ошибка API: HTTP ${r.status}`, true);
+          retryBtn.style.display = "inline-block";
+          return;
+        }
+
+        setStatus("OK: данные загружены", false);
+        // Тут уже рисуешь интерфейс из data
+      } catch (e) {
+        setStatus("Ошибка сети при запросе к API", true);
+        debugEl.textContent = String(e);
+        retryBtn.style.display = "inline-block";
+      }
     }
-  }
 
-  loadMe();
-</script>
+    retryBtn.addEventListener("click", loadMe);
+    loadMe();
+  </script>
 </body>
 </html>
