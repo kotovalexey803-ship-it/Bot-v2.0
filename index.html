@@ -21,10 +21,7 @@
     .list{margin-top:10px}
     .item{padding:14px 6px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
     .item:first-child{border-top:0}
-    .bar{height:10px;background:#eef0f3;border-radius:999px;overflow:hidden}
-    .bar > div{height:100%;background:#1677ff;width:0%}
     .small{font-size:12px;color:#6b7280}
-    .danger{color:#c20d1a;font-weight:900}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;word-break:break-all}
   </style>
 </head>
@@ -40,7 +37,7 @@
       <div id="active" class="badge">—</div>
     </div>
 
-    <div style="margin-top:10px" class="card" id="statusCard" style="padding:12px">
+    <div class="card" id="statusCard" style="margin-top:10px;padding:12px">
       <div class="muted">Статус</div>
       <div style="font-size:18px;font-weight:900" id="statusText">—</div>
       <div class="muted">до: <b id="exp">—</b></div>
@@ -79,43 +76,86 @@
 
   <div class="card">
     <div class="muted">Диагностика</div>
-    <div class="small">Если что-то не грузится — чаще всего проблема в HTTPS на API.</div>
     <div class="small">API: <span class="mono" id="apiText">—</span></div>
     <div class="small">initData: <span class="mono" id="initLen">—</span></div>
+    <div class="small">last error: <span class="mono" id="lastErr">—</span></div>
   </div>
 
 </div>
 
 <script>
-  const tg = window.Telegram.WebApp;
-  tg.expand();
+  const tg = window.Telegram?.WebApp;
+  if (tg) tg.expand();
 
-  // ВАЖНО: сюда вставишь свой HTTPS домен (ниже я дам готовый nginx + certbot)
-  const API_BASE = "https://YOUR_DOMAIN";
+  // ВАЖНО: ваш реальный HTTPS API домен
+  const API_BASE = "https://api.blogyoga.site";
 
   document.getElementById("apiText").innerText = API_BASE;
-  document.getElementById("initLen").innerText = String((tg.initData || "").length);
+  document.getElementById("initLen").innerText = String(((tg && tg.initData) || "").length);
 
   let subUrl = "";
   let qrUrl = "";
   let redirectUrl = "";
 
+  function setBadgeActive(isActive) {
+    const badge = document.getElementById("active");
+    if (isActive) { badge.className = "badge ok"; badge.innerText = "Активна"; }
+    else { badge.className = "badge bad"; badge.innerText = "Неактивна"; }
+  }
+
+  function showAlert(msg) {
+    if (tg && tg.showAlert) tg.showAlert(msg);
+    else alert(msg);
+  }
+
+  function setLastErr(text) {
+    document.getElementById("lastErr").innerText = text || "—";
+  }
+
+  async function safeJson(resp) {
+    const ct = (resp.headers.get("content-type") || "").toLowerCase();
+    if (ct.includes("application/json")) return await resp.json();
+    const t = await resp.text();
+    return { status: "error", message: t?.slice(0, 300) || "non_json_response" };
+  }
+
   async function load() {
     try {
-      const r = await fetch(`${API_BASE}/api/me`, {
-        headers: { "X-Tg-Init-Data": tg.initData }
+      if (!tg || !tg.initData) {
+        setLastErr("no_tg_init_data");
+        showAlert("Откройте мини-приложение внутри Telegram (нужно initData).");
+        return;
+      }
+
+      const url = `${API_BASE}/api/me`;
+
+      const r = await fetch(url, {
+        method: "GET",
+        headers: {
+          "X-Tg-Init-Data": tg.initData
+        }
       });
 
-      const j = await r.json();
-      if (!j || j.status !== "success") throw new Error(j?.message || "bad_response");
+      const j = await safeJson(r);
 
-      const d = j.data;
+      if (!r.ok) {
+        const msg = `HTTP ${r.status}: ${j?.message || "request_failed"}`;
+        setLastErr(msg);
+        showAlert("Не удалось загрузить данные. " + msg);
+        return;
+      }
+
+      if (!j || j.status !== "success") {
+        const msg = j?.message || "bad_response";
+        setLastErr(msg);
+        showAlert("Не удалось загрузить данные. " + msg);
+        return;
+      }
+
+      const d = j.data || {};
 
       document.getElementById("user").innerText = d.username || "—";
-
-      const badge = document.getElementById("active");
-      if (d.is_active) { badge.className = "badge ok"; badge.innerText = "Активна"; }
-      else { badge.className = "badge bad"; badge.innerText = "Неактивна"; }
+      setBadgeActive(!!d.is_active);
 
       document.getElementById("statusText").innerText = d.is_active ? "Подписка активна" : "Подписка истекла";
       document.getElementById("exp").innerText = d.expiry_date || "—";
@@ -125,28 +165,49 @@
       redirectUrl = d.redirect_url || "";
       qrUrl = d.qr_url || "";
 
+      setLastErr("ok");
     } catch (e) {
-      tg.showAlert("Не удалось загрузить данные. Проверьте: API доступен по HTTPS и запущен.");
+      const msg = (e && e.message) ? e.message : String(e);
+      setLastErr(msg);
+      showAlert("Не удалось загрузить данные. Проверьте: API доступен по HTTPS и запущен. (" + msg + ")");
     }
   }
 
   function openRedirect() {
-    if (!redirectUrl) return tg.showAlert("Ссылка ещё не готова.");
+    if (!redirectUrl) return showAlert("Ссылка ещё не готова.");
     window.location.href = redirectUrl;
   }
 
   async function copySub() {
-    if (!subUrl) return tg.showAlert("Ссылка ещё не готова.");
-    await navigator.clipboard.writeText(subUrl);
-    tg.showAlert("Ссылка скопирована.");
+    if (!subUrl) return showAlert("Ссылка ещё не готова.");
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(subUrl);
+      } else {
+        // fallback для WebView
+        const ta = document.createElement("textarea");
+        ta.value = subUrl;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      showAlert("Ссылка скопирована.");
+    } catch {
+      showAlert("Не удалось скопировать. Скопируйте вручную:\n" + subUrl);
+    }
   }
 
   function openQr() {
-    if (!qrUrl) return tg.showAlert("QR ещё не готов.");
+    if (!qrUrl) return showAlert("QR ещё не готов.");
     window.open(qrUrl, "_blank");
   }
 
   function installPhone() {
+    if (!tg || !tg.showPopup) return showAlert("Откройте внутри Telegram.");
     tg.showPopup({
       title:"Установка на смартфон",
       message:"1) Установите приложение\n2) Нажмите «Добавить подписку» или импортируйте ссылку/QR",
@@ -161,8 +222,8 @@
     });
   }
 
-  function installPC() { tg.showAlert("Дальше добавим готовые инструкции под твой стек (Windows/macOS)."); }
-  function installTV() { tg.showAlert("Дальше добавим подключение TV (Android TV/Apple TV)."); }
+  function installPC() { showAlert("Дальше добавим готовые инструкции под Windows/macOS."); }
+  function installTV() { showAlert("Дальше добавим подключение TV (Android TV/Apple TV)."); }
 
   load();
 </script>
