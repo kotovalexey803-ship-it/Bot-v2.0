@@ -3,187 +3,146 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="color-scheme" content="light dark" />
-  <title>KraftVPN Mini App</title>
-
-  <!-- Telegram WebApp SDK -->
+  <title>KraftVPN</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
   <style>
-    :root { --pad: 16px; }
-    body { margin: 0; font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif; }
-    .wrap { padding: var(--pad); max-width: 520px; margin: 0 auto; }
-    .card { border-radius: 14px; padding: 14px; background: rgba(0,0,0,.06); margin: 12px 0; }
-    .row { display:flex; justify-content:space-between; gap: 12px; padding: 6px 0; }
-    .muted { opacity: .7; }
-    .err { background: rgba(255,0,0,.10); border: 1px solid rgba(255,0,0,.20); }
-    .ok { background: rgba(0,128,0,.10); border: 1px solid rgba(0,128,0,.20); }
-    button {
-      width: 100%; border: 0; border-radius: 12px; padding: 12px 14px;
-      font-size: 16px; cursor: pointer;
-    }
-    .btn { background: #2f6feb; color: #fff; }
-    .btn2 { background: rgba(0,0,0,.08); }
-    pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-size: 12px; }
+    body { font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial; margin: 0; padding: 16px; background:#f6f7fb; }
+    .card { background:#fff; border-radius:16px; padding:16px; box-shadow:0 6px 24px rgba(0,0,0,.08); margin-bottom:12px; }
+    .row { display:flex; justify-content:space-between; gap:12px; }
+    .muted { color:#6b7280; font-size:14px; }
+    .big { font-size:22px; font-weight:700; }
+    .btn { width:100%; border:0; border-radius:12px; padding:14px 12px; font-size:16px; font-weight:600; cursor:pointer; }
+    .btn-primary { background:#2f7df6; color:#fff; }
+    .btn-secondary { background:#eef2ff; color:#1f2a44; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:13px; word-break:break-all; }
+    .error { color:#b42318; font-weight:700; }
+    .ok { color:#067647; font-weight:700; }
+    .hidden { display:none; }
   </style>
 </head>
 
 <body>
-  <div class="wrap">
-    <h2 style="margin: 10px 0 0;">Подписка</h2>
-    <div class="muted" style="margin-top: 6px;">KraftVPN Mini App</div>
-
-    <div id="status" class="card muted">Инициализация…</div>
-
-    <div class="card">
-      <div class="row"><div class="muted">Пользователь</div><div id="user">—</div></div>
-      <div class="row"><div class="muted">ID</div><div id="uid">—</div></div>
-    </div>
-
-    <div class="card">
-      <div class="row"><div class="muted">Статус</div><div id="sub_status">—</div></div>
-      <div class="row"><div class="muted">До</div><div id="sub_until">—</div></div>
-      <div class="row"><div class="muted">Лимит устройств</div><div id="device_limit">—</div></div>
-    </div>
-
-    <button class="btn" id="reloadBtn">Обновить данные</button>
-    <div style="height:10px"></div>
-    <button class="btn2" id="closeBtn">Закрыть</button>
-
-    <div class="card" style="margin-top: 14px;">
-      <div class="muted" style="margin-bottom:6px;">Диагностика</div>
-      <pre id="debug">—</pre>
+  <div class="card">
+    <div class="row">
+      <div>
+        <div class="big">Подписка</div>
+        <div class="muted" id="userLine">Пользователь: —</div>
+      </div>
+      <div class="big" id="planLine">—</div>
     </div>
   </div>
 
+  <div class="card">
+    <div class="muted">Статус</div>
+    <div class="big" id="statusLine">—</div>
+    <div class="muted" style="margin-top:6px;">до: <span id="untilLine">—</span></div>
+    <div class="muted" style="margin-top:6px;">Лимит устройств: <span id="devicesLine">—</span></div>
+  </div>
+
+  <div class="card" id="linksCard">
+    <button class="btn btn-primary" id="btnCopy" disabled>Скопировать ссылку</button>
+    <div style="height:10px"></div>
+    <button class="btn btn-secondary" id="btnOpen" disabled>Открыть в приложении</button>
+    <div style="height:10px"></div>
+    <div class="muted">Ссылка (если нужно вручную):</div>
+    <div class="mono" id="subUrl">—</div>
+  </div>
+
+  <div class="card" id="msgCard">
+    <div id="msg" class="muted">Загрузка…</div>
+  </div>
+
 <script>
-  // ВАЖНО: твой API домен (у тебя уже есть HTTPS на api.blogyoga.site)
   const API_BASE = "https://api.blogyoga.site";
 
-  const el = (id) => document.getElementById(id);
-
-  function setStatus(text, type="muted") {
-    const s = el("status");
-    s.className = "card " + type;
-    s.textContent = text;
+  function setMsg(text, cls) {
+    const el = document.getElementById("msg");
+    el.className = cls || "muted";
+    el.textContent = text;
   }
 
-  function safeJsonStringify(obj) {
-    try { return JSON.stringify(obj, null, 2); } catch { return String(obj); }
-  }
-
-  async function apiGet(path, initData) {
-    const url = API_BASE + path;
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        // Самое важное — передать initData на бэкенд
-        "X-Telegram-Init-Data": initData,
-        "Accept": "application/json"
-      }
-    });
-
-    const ct = res.headers.get("content-type") || "";
-    const data = ct.includes("application/json") ? await res.json() : await res.text();
-
-    if (!res.ok) {
-      const err = new Error("HTTP " + res.status);
-      err.status = res.status;
-      err.data = data;
-      throw err;
-    }
-    return data;
-  }
-
-  async function loadData() {
-    const tg = window.Telegram?.WebApp;
-
-    if (!tg) {
-      setStatus("Telegram WebApp SDK не загрузился.", "err");
-      el("debug").textContent = "Нет window.Telegram.WebApp";
+  async function loadMe() {
+    if (!window.Telegram || !Telegram.WebApp) {
+      setMsg("Откройте мини-приложение внутри Telegram (нужно initData).", "error");
       return;
     }
 
-    tg.ready();
-    tg.expand();
+    Telegram.WebApp.ready();
+    Telegram.WebApp.expand();
 
-    const initData = tg.initData || "";
-    const initDataUnsafe = tg.initDataUnsafe || {};
-
-    // Требование Telegram Mini App: initData должно быть непустым внутри Telegram
+    const initData = Telegram.WebApp.initData || "";
     if (!initData) {
-      setStatus("Откройте мини-приложение внутри Telegram (нужно initData).", "err");
-      el("debug").textContent = "initData пустой. Обычно так бывает, если открыть ссылку в Safari/Chrome, а не внутри Telegram.";
+      setMsg("initData пустой. Откройте мини-приложение из чата с ботом.", "error");
       return;
     }
-
-    // Покажем базовую инфу из Telegram
-    const u = initDataUnsafe.user || {};
-    el("user").textContent = (u.username ? "@" + u.username : (u.first_name || "—"));
-    el("uid").textContent = u.id ? String(u.id) : "—";
-
-    setStatus("Загружаю данные из API…", "muted");
-    el("debug").textContent = "API_BASE=" + API_BASE + "\n\ninitDataUnsafe:\n" + safeJsonStringify(initDataUnsafe);
 
     try {
-      // 1) /api/me — бэкенд должен провалидировать initData и вернуть данные пользователя
-      const me = await apiGet("/api/me", initData);
-
-      // 2) user_id возьмём из ответа или из Telegram
-      const userId = me.user_id || me.id || (u.id ? String(u.id) : null);
-
-      // Обновим UI
-      if (me.username) el("user").textContent = "@" + me.username;
-      if (userId) el("uid").textContent = String(userId);
-
-      // 3) попробуем получить подписку, если эндпоинт есть
-      //    (если у тебя /sub/{user_id} отдаёт подписку — это оно)
-      let sub = null;
-      if (userId) {
-        try {
-          sub = await apiGet("/sub/" + encodeURIComponent(userId), initData);
-        } catch (e) {
-          // не критично
-          sub = null;
+      const r = await fetch(`${API_BASE}/api/me`, {
+        method: "GET",
+        headers: {
+          "X-Tg-Init-Data": initData
         }
+      });
+
+      const text = await r.text();
+      let data = null;
+      try { data = JSON.parse(text); } catch(e) {}
+
+      if (!r.ok) {
+        // Самая частая ситуация у тебя сейчас:
+        if (r.status === 404 && data && data.detail === "user_not_found") {
+          setMsg("Пользователь не найден. Нажмите /start в боте и откройте мини-приложение снова.", "error");
+          return;
+        }
+        setMsg(`Ошибка API: HTTP ${r.status} ${data?.detail ? (": " + data.detail) : ""}`, "error");
+        return;
       }
 
-      // Заполняем подписку максимально “мягко” (на случай разных полей)
-      const status = sub?.status ?? me?.status ?? "—";
-      const until  = sub?.until  ?? me?.until  ?? sub?.paid_to ?? me?.paid_to ?? "—";
-      const limit  = sub?.device_limit ?? me?.device_limit ?? sub?.limit ?? me?.limit ?? "—";
+      // Ожидаем, что API вернет хотя бы user и ссылки.
+      const user = data.user || data.tg_user || {};
+      const subUrl = data.sub_url || data.subUrl || "";
+      const openUrl = data.redirect_url || data.open_url || data.openUrl || "";
 
-      el("sub_status").textContent = String(status);
-      el("sub_until").textContent = String(until);
-      el("device_limit").textContent = String(limit);
+      document.getElementById("userLine").textContent =
+        "Пользователь: " + (user.username ? ("@" + user.username) : (user.first_name || user.id || "—"));
 
-      setStatus("Данные загружены.", "ok");
-      el("debug").textContent =
-        "API_BASE=" + API_BASE +
-        "\n\n/api/me:\n" + safeJsonStringify(me) +
-        (sub ? ("\n\n/sub/{user_id}:\n" + safeJsonStringify(sub)) : "\n\n/sub/{user_id}: не использовано или вернуло ошибку");
+      document.getElementById("planLine").textContent = data.plan || "—";
+      document.getElementById("statusLine").textContent = data.status || "—";
+      document.getElementById("untilLine").textContent = data.until || data.expires_at || "—";
+      document.getElementById("devicesLine").textContent = data.devices_limit ?? data.devices ?? "—";
 
+      document.getElementById("subUrl").textContent = subUrl || "—";
+
+      const btnCopy = document.getElementById("btnCopy");
+      const btnOpen = document.getElementById("btnOpen");
+
+      if (subUrl) {
+        btnCopy.disabled = false;
+        btnCopy.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(subUrl);
+            setMsg("Ссылка скопирована.", "ok");
+          } catch (e) {
+            setMsg("Не удалось скопировать. Скопируйте вручную из блока ниже.", "error");
+          }
+        };
+      }
+
+      if (openUrl) {
+        btnOpen.disabled = false;
+        btnOpen.onclick = () => {
+          // Открываем через Telegram
+          Telegram.WebApp.openLink(openUrl);
+        };
+      }
+
+      setMsg("Данные загружены.", "ok");
     } catch (e) {
-      // Частая проблема: 404 user_not_found
-      const detail = (e?.data && (e.data.detail || e.data)) ? (e.data.detail || e.data) : "";
-      if (e.status === 404 && String(detail).includes("user_not_found")) {
-        setStatus("Пользователь не найден. Сначала нажмите /start в боте и откройте Mini App заново.", "err");
-      } else {
-        setStatus("Не удалось загрузить данные из API: " + (e.message || "ошибка"), "err");
-      }
-      el("debug").textContent =
-        "Ошибка:\n" + safeJsonStringify({ message: e.message, status: e.status, data: e.data });
+      setMsg("Не удалось подключиться к API. Проверьте HTTPS и доступность api.blogyoga.site.", "error");
     }
   }
 
-  el("reloadBtn").addEventListener("click", loadData);
-  el("closeBtn").addEventListener("click", () => {
-    const tg = window.Telegram?.WebApp;
-    if (tg) tg.close();
-    else window.close();
-  });
-
-  loadData();
+  loadMe();
 </script>
 </body>
 </html>
