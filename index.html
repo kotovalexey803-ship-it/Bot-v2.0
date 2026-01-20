@@ -1,79 +1,93 @@
-mkdir -p /var/www/miniapp
-cat > /var/www/miniapp/index.html <<'HTML'
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>KraftVPN MiniApp</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>KraftVPN Mini App</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:16px}
-    .box{max-width:520px;margin:0 auto}
-    button{width:100%;padding:12px 14px;font-size:16px}
-    pre{white-space:pre-wrap;word-break:break-word;background:#f6f7f8;padding:12px;border-radius:8px}
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 16px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin: 12px 0; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
+    button { padding: 10px 12px; border-radius: 10px; border: 1px solid #d1d5db; background: #fff; cursor: pointer; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+    .ok { color: #065f46; }
+    .err { color: #991b1b; }
+    small { color: #6b7280; }
   </style>
 </head>
 <body>
-<div class="box">
-  <h2>KraftVPN</h2>
-  <p id="status">Загрузка...</p>
-  <button id="btn" disabled>Получить данные</button>
-  <pre id="out"></pre>
-</div>
+  <h2>Mini App диагностика</h2>
+  <div class="card">
+    <div><b>API:</b> <code id="apiBase"></code></div>
+    <div><b>initData длина:</b> <code id="initLen">0</code></div>
+    <div><b>user:</b> <code id="userStr">—</code></div>
+    <small>Открой именно внутри Telegram. В обычном браузере initData будет пустым.</small>
+  </div>
 
-<script>
-  const tg = window.Telegram?.WebApp;
-  const API = "https://api.blogyoga.site";
+  <div class="row">
+    <button id="btnMe">Вызвать /api/me</button>
+    <button id="btnHealth">Вызвать /health</button>
+  </div>
 
-  function show(obj){ document.getElementById('out').textContent = JSON.stringify(obj, null, 2); }
+  <div class="card">
+    <b>Ответ</b>
+    <pre id="out">—</pre>
+  </div>
 
-  async function loadMe(){
-    try{
-      const initData = tg?.initData || "";
-      if(!initData){
-        document.getElementById('status').textContent = "Ошибка: Telegram initData пустой. Открой страницу из Mini App внутри Telegram.";
-        return;
-      }
+  <script>
+    const API_BASE = "https://api.blogyoga.site";
+    document.getElementById("apiBase").textContent = API_BASE;
 
-      document.getElementById('status').textContent = "Запрос к API...";
-      const r = await fetch(API + "/api/me", {
-        headers: {
-          "X-Tg-Init-Data": initData
-        }
-      });
-
-      const data = await r.json().catch(()=>({status:"error",message:"bad_json"}));
-      show({http_status: r.status, response: data});
-
-      if(r.status === 404 && data?.message === "user_not_found"){
-        document.getElementById('status').textContent =
-          "Пользователь не найден в БД. Открой бота и нажми /start один раз, затем снова открой Mini App.";
-        return;
-      }
-
-      if(r.status !== 200){
-        document.getElementById('status').textContent = "Ошибка API: HTTP " + r.status;
-        return;
-      }
-
-      document.getElementById('status').textContent = "OK. Подписка/QR готовы.";
-    }catch(e){
-      document.getElementById('status').textContent = "Ошибка: " + (e?.message || e);
-      show({error: String(e)});
+    function out(obj, ok=true) {
+      const el = document.getElementById("out");
+      el.className = ok ? "ok" : "err";
+      el.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
     }
-  }
 
-  document.getElementById('btn').onclick = loadMe;
+    // Telegram WebApp
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
 
-  if(tg){
-    tg.ready();
-    document.getElementById('status').textContent = "Telegram WebApp готов. Нажми кнопку.";
-    document.getElementById('btn').disabled = false;
-  } else {
-    document.getElementById('status').textContent = "Открой это внутри Telegram Mini App.";
-  }
-</script>
+    if (!tg) {
+      out("Telegram.WebApp не найден. Открой страницу внутри Telegram Mini App.", false);
+    } else {
+      tg.ready();
+      tg.expand();
+
+      const initData = tg.initData || "";
+      document.getElementById("initLen").textContent = String(initData.length);
+
+      const u = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
+      document.getElementById("userStr").textContent = u ? `${u.id} @${u.username || ""}` : "—";
+
+      async function call(path, withInit=true) {
+        const headers = {};
+        if (withInit) headers["X-Tg-Init-Data"] = initData;
+        const r = await fetch(API_BASE + path, { method: "GET", headers, credentials: "omit" });
+        const text = await r.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = { raw: text }; }
+        return { http: r.status, data };
+      }
+
+      document.getElementById("btnHealth").onclick = async () => {
+        try {
+          const res = await call("/health", false);
+          out(res, res.http >= 200 && res.http < 300);
+        } catch (e) {
+          out(String(e), false);
+        }
+      };
+
+      document.getElementById("btnMe").onclick = async () => {
+        try {
+          const res = await call("/api/me", true);
+          out(res, res.http >= 200 && res.http < 300);
+        } catch (e) {
+          out(String(e), false);
+        }
+      };
+    }
+  </script>
 </body>
 </html>
-HTML
