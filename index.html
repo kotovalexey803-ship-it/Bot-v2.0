@@ -1,231 +1,189 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-  <title>Keks VPN</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <title>KraftVPN Mini App</title>
+
+  <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
   <style>
-    body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial;margin:0;background:#f5f6f8;color:#111}
-    .wrap{padding:14px}
-    .card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:12px}
-    .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .title{font-size:22px;font-weight:900;margin:0}
-    .muted{color:#6b7280;font-size:13px;line-height:1.25}
-    .badge{padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px}
-    .ok{background:#e8fff2;color:#0f8a3b}
-    .bad{background:#ffe8ea;color:#c20d1a}
-    .btn{width:100%;border:0;border-radius:14px;padding:14px;font-weight:900;font-size:16px}
-    .btn-primary{background:#1677ff;color:#fff}
-    .btn-ghost{background:#eef2ff;color:#1f2a44}
-    .list{margin-top:10px}
-    .item{padding:14px 6px;border-top:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
-    .item:first-child{border-top:0}
-    .small{font-size:12px;color:#6b7280}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;word-break:break-all}
+    :root { --pad: 16px; }
+    body { margin: 0; font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif; }
+    .wrap { padding: var(--pad); max-width: 520px; margin: 0 auto; }
+    .card { border-radius: 14px; padding: 14px; background: rgba(0,0,0,.06); margin: 12px 0; }
+    .row { display:flex; justify-content:space-between; gap: 12px; padding: 6px 0; }
+    .muted { opacity: .7; }
+    .err { background: rgba(255,0,0,.10); border: 1px solid rgba(255,0,0,.20); }
+    .ok { background: rgba(0,128,0,.10); border: 1px solid rgba(0,128,0,.20); }
+    button {
+      width: 100%; border: 0; border-radius: 12px; padding: 12px 14px;
+      font-size: 16px; cursor: pointer;
+    }
+    .btn { background: #2f6feb; color: #fff; }
+    .btn2 { background: rgba(0,0,0,.08); }
+    pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-size: 12px; }
   </style>
 </head>
+
 <body>
-<div class="wrap">
+  <div class="wrap">
+    <h2 style="margin: 10px 0 0;">Подписка</h2>
+    <div class="muted" style="margin-top: 6px;">KraftVPN Mini App</div>
 
-  <div class="card">
-    <div class="row">
-      <div>
-        <div class="title">Подписка</div>
-        <div class="muted">Пользователь: <b id="user">—</b></div>
-      </div>
-      <div id="active" class="badge">—</div>
+    <div id="status" class="card muted">Инициализация…</div>
+
+    <div class="card">
+      <div class="row"><div class="muted">Пользователь</div><div id="user">—</div></div>
+      <div class="row"><div class="muted">ID</div><div id="uid">—</div></div>
     </div>
 
-    <div class="card" id="statusCard" style="margin-top:10px;padding:12px">
-      <div class="muted">Статус</div>
-      <div style="font-size:18px;font-weight:900" id="statusText">—</div>
-      <div class="muted">до: <b id="exp">—</b></div>
+    <div class="card">
+      <div class="row"><div class="muted">Статус</div><div id="sub_status">—</div></div>
+      <div class="row"><div class="muted">До</div><div id="sub_until">—</div></div>
+      <div class="row"><div class="muted">Лимит устройств</div><div id="device_limit">—</div></div>
     </div>
 
-    <div style="margin-top:10px">
-      <div class="row">
-        <div class="muted">Лимит устройств</div>
-        <div style="font-weight:900" id="limit">—</div>
-      </div>
-      <div class="small" style="margin-top:6px">Если вы меняли лимит в админке — здесь будет актуальное значение.</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="muted" style="margin-bottom:10px">Уже есть v2RayTun или Happ?</div>
-    <button class="btn btn-primary" onclick="openRedirect()">Добавить подписку</button>
+    <button class="btn" id="reloadBtn">Обновить данные</button>
     <div style="height:10px"></div>
-    <button class="btn btn-ghost" onclick="copySub()">Скопировать ссылку</button>
-    <div style="height:10px"></div>
-    <button class="btn btn-ghost" onclick="openQr()">Показать QR-код</button>
+    <button class="btn2" id="closeBtn">Закрыть</button>
 
-    <div style="margin-top:12px" class="small">
-      Если приложение не открылось автоматически — используйте «Скопировать ссылку» или QR и импортируйте вручную.
+    <div class="card" style="margin-top: 14px;">
+      <div class="muted" style="margin-bottom:6px;">Диагностика</div>
+      <pre id="debug">—</pre>
     </div>
   </div>
-
-  <div class="card">
-    <div class="muted">Подключение VPN</div>
-    <div class="list">
-      <div class="item" onclick="installPhone()"><div>Установка на Смартфон</div><div>›</div></div>
-      <div class="item" onclick="installPC()"><div>Установка на ПК</div><div>›</div></div>
-      <div class="item" onclick="installTV()"><div>Подключить на TV</div><div>›</div></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="muted">Диагностика</div>
-    <div class="small">API: <span class="mono" id="apiText">—</span></div>
-    <div class="small">initData: <span class="mono" id="initLen">—</span></div>
-    <div class="small">last error: <span class="mono" id="lastErr">—</span></div>
-  </div>
-
-</div>
 
 <script>
-  const tg = window.Telegram?.WebApp;
-  if (tg) tg.expand();
-
-  // ВАЖНО: ваш реальный HTTPS API домен
+  // ВАЖНО: твой API домен (у тебя уже есть HTTPS на api.blogyoga.site)
   const API_BASE = "https://api.blogyoga.site";
 
-  document.getElementById("apiText").innerText = API_BASE;
-  document.getElementById("initLen").innerText = String(((tg && tg.initData) || "").length);
+  const el = (id) => document.getElementById(id);
 
-  let subUrl = "";
-  let qrUrl = "";
-  let redirectUrl = "";
-
-  function setBadgeActive(isActive) {
-    const badge = document.getElementById("active");
-    if (isActive) { badge.className = "badge ok"; badge.innerText = "Активна"; }
-    else { badge.className = "badge bad"; badge.innerText = "Неактивна"; }
+  function setStatus(text, type="muted") {
+    const s = el("status");
+    s.className = "card " + type;
+    s.textContent = text;
   }
 
-  function showAlert(msg) {
-    if (tg && tg.showAlert) tg.showAlert(msg);
-    else alert(msg);
+  function safeJsonStringify(obj) {
+    try { return JSON.stringify(obj, null, 2); } catch { return String(obj); }
   }
 
-  function setLastErr(text) {
-    document.getElementById("lastErr").innerText = text || "—";
-  }
-
-  async function safeJson(resp) {
-    const ct = (resp.headers.get("content-type") || "").toLowerCase();
-    if (ct.includes("application/json")) return await resp.json();
-    const t = await resp.text();
-    return { status: "error", message: t?.slice(0, 300) || "non_json_response" };
-  }
-
-  async function load() {
-    try {
-      if (!tg || !tg.initData) {
-        setLastErr("no_tg_init_data");
-        showAlert("Откройте мини-приложение внутри Telegram (нужно initData).");
-        return;
+  async function apiGet(path, initData) {
+    const url = API_BASE + path;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        // Самое важное — передать initData на бэкенд
+        "X-Telegram-Init-Data": initData,
+        "Accept": "application/json"
       }
-
-      const url = `${API_BASE}/api/me`;
-
-      const r = await fetch(url, {
-        method: "GET",
-        headers: {
-          "X-Tg-Init-Data": tg.initData
-        }
-      });
-
-      const j = await safeJson(r);
-
-      if (!r.ok) {
-        const msg = `HTTP ${r.status}: ${j?.message || "request_failed"}`;
-        setLastErr(msg);
-        showAlert("Не удалось загрузить данные. " + msg);
-        return;
-      }
-
-      if (!j || j.status !== "success") {
-        const msg = j?.message || "bad_response";
-        setLastErr(msg);
-        showAlert("Не удалось загрузить данные. " + msg);
-        return;
-      }
-
-      const d = j.data || {};
-
-      document.getElementById("user").innerText = d.username || "—";
-      setBadgeActive(!!d.is_active);
-
-      document.getElementById("statusText").innerText = d.is_active ? "Подписка активна" : "Подписка истекла";
-      document.getElementById("exp").innerText = d.expiry_date || "—";
-      document.getElementById("limit").innerText = String(d.device_limit ?? "—");
-
-      subUrl = d.sub_url || "";
-      redirectUrl = d.redirect_url || "";
-      qrUrl = d.qr_url || "";
-
-      setLastErr("ok");
-    } catch (e) {
-      const msg = (e && e.message) ? e.message : String(e);
-      setLastErr(msg);
-      showAlert("Не удалось загрузить данные. Проверьте: API доступен по HTTPS и запущен. (" + msg + ")");
-    }
-  }
-
-  function openRedirect() {
-    if (!redirectUrl) return showAlert("Ссылка ещё не готова.");
-    window.location.href = redirectUrl;
-  }
-
-  async function copySub() {
-    if (!subUrl) return showAlert("Ссылка ещё не готова.");
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(subUrl);
-      } else {
-        // fallback для WebView
-        const ta = document.createElement("textarea");
-        ta.value = subUrl;
-        ta.style.position = "fixed";
-        ta.style.left = "-9999px";
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        document.execCommand("copy");
-        document.body.removeChild(ta);
-      }
-      showAlert("Ссылка скопирована.");
-    } catch {
-      showAlert("Не удалось скопировать. Скопируйте вручную:\n" + subUrl);
-    }
-  }
-
-  function openQr() {
-    if (!qrUrl) return showAlert("QR ещё не готов.");
-    window.open(qrUrl, "_blank");
-  }
-
-  function installPhone() {
-    if (!tg || !tg.showPopup) return showAlert("Откройте внутри Telegram.");
-    tg.showPopup({
-      title:"Установка на смартфон",
-      message:"1) Установите приложение\n2) Нажмите «Добавить подписку» или импортируйте ссылку/QR",
-      buttons:[
-        {id:"ios", type:"default", text:"iOS"},
-        {id:"and", type:"default", text:"Android"},
-        {type:"close"}
-      ]
-    }, (id) => {
-      if (id === "ios") window.open("https://apps.apple.com/", "_blank");
-      if (id === "and") window.open("https://play.google.com/store", "_blank");
     });
+
+    const ct = res.headers.get("content-type") || "";
+    const data = ct.includes("application/json") ? await res.json() : await res.text();
+
+    if (!res.ok) {
+      const err = new Error("HTTP " + res.status);
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
+    return data;
   }
 
-  function installPC() { showAlert("Дальше добавим готовые инструкции под Windows/macOS."); }
-  function installTV() { showAlert("Дальше добавим подключение TV (Android TV/Apple TV)."); }
+  async function loadData() {
+    const tg = window.Telegram?.WebApp;
 
-  load();
+    if (!tg) {
+      setStatus("Telegram WebApp SDK не загрузился.", "err");
+      el("debug").textContent = "Нет window.Telegram.WebApp";
+      return;
+    }
+
+    tg.ready();
+    tg.expand();
+
+    const initData = tg.initData || "";
+    const initDataUnsafe = tg.initDataUnsafe || {};
+
+    // Требование Telegram Mini App: initData должно быть непустым внутри Telegram
+    if (!initData) {
+      setStatus("Откройте мини-приложение внутри Telegram (нужно initData).", "err");
+      el("debug").textContent = "initData пустой. Обычно так бывает, если открыть ссылку в Safari/Chrome, а не внутри Telegram.";
+      return;
+    }
+
+    // Покажем базовую инфу из Telegram
+    const u = initDataUnsafe.user || {};
+    el("user").textContent = (u.username ? "@" + u.username : (u.first_name || "—"));
+    el("uid").textContent = u.id ? String(u.id) : "—";
+
+    setStatus("Загружаю данные из API…", "muted");
+    el("debug").textContent = "API_BASE=" + API_BASE + "\n\ninitDataUnsafe:\n" + safeJsonStringify(initDataUnsafe);
+
+    try {
+      // 1) /api/me — бэкенд должен провалидировать initData и вернуть данные пользователя
+      const me = await apiGet("/api/me", initData);
+
+      // 2) user_id возьмём из ответа или из Telegram
+      const userId = me.user_id || me.id || (u.id ? String(u.id) : null);
+
+      // Обновим UI
+      if (me.username) el("user").textContent = "@" + me.username;
+      if (userId) el("uid").textContent = String(userId);
+
+      // 3) попробуем получить подписку, если эндпоинт есть
+      //    (если у тебя /sub/{user_id} отдаёт подписку — это оно)
+      let sub = null;
+      if (userId) {
+        try {
+          sub = await apiGet("/sub/" + encodeURIComponent(userId), initData);
+        } catch (e) {
+          // не критично
+          sub = null;
+        }
+      }
+
+      // Заполняем подписку максимально “мягко” (на случай разных полей)
+      const status = sub?.status ?? me?.status ?? "—";
+      const until  = sub?.until  ?? me?.until  ?? sub?.paid_to ?? me?.paid_to ?? "—";
+      const limit  = sub?.device_limit ?? me?.device_limit ?? sub?.limit ?? me?.limit ?? "—";
+
+      el("sub_status").textContent = String(status);
+      el("sub_until").textContent = String(until);
+      el("device_limit").textContent = String(limit);
+
+      setStatus("Данные загружены.", "ok");
+      el("debug").textContent =
+        "API_BASE=" + API_BASE +
+        "\n\n/api/me:\n" + safeJsonStringify(me) +
+        (sub ? ("\n\n/sub/{user_id}:\n" + safeJsonStringify(sub)) : "\n\n/sub/{user_id}: не использовано или вернуло ошибку");
+
+    } catch (e) {
+      // Частая проблема: 404 user_not_found
+      const detail = (e?.data && (e.data.detail || e.data)) ? (e.data.detail || e.data) : "";
+      if (e.status === 404 && String(detail).includes("user_not_found")) {
+        setStatus("Пользователь не найден. Сначала нажмите /start в боте и откройте Mini App заново.", "err");
+      } else {
+        setStatus("Не удалось загрузить данные из API: " + (e.message || "ошибка"), "err");
+      }
+      el("debug").textContent =
+        "Ошибка:\n" + safeJsonStringify({ message: e.message, status: e.status, data: e.data });
+    }
+  }
+
+  el("reloadBtn").addEventListener("click", loadData);
+  el("closeBtn").addEventListener("click", () => {
+    const tg = window.Telegram?.WebApp;
+    if (tg) tg.close();
+    else window.close();
+  });
+
+  loadData();
 </script>
 </body>
 </html>
