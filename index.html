@@ -1,93 +1,463 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>KraftVPN Mini App</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>BARNAUL V</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 16px; }
-    .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; margin: 12px 0; }
-    .row { display:flex; gap:10px; flex-wrap:wrap; }
-    button { padding: 10px 12px; border-radius: 10px; border: 1px solid #d1d5db; background: #fff; cursor: pointer; }
-    pre { white-space: pre-wrap; word-break: break-word; }
-    .ok { color: #065f46; }
-    .err { color: #991b1b; }
-    small { color: #6b7280; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f5f5f7;
+      color: #000;
+      overflow-x: hidden;
+    }
+
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid #d0d0d5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 17px;
+      font-weight: 600;
+      z-index: 1000;
+    }
+
+    .close-btn, .more-btn {
+      color: #007aff;
+      cursor: pointer;
+    }
+
+    .title {
+      flex: 1;
+      text-align: center;
+    }
+
+    .content {
+      padding: 54px 16px 100px;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 600;
+      margin: 12px 0 4px;
+      text-align: center;
+    }
+
+    .step-label {
+      font-size: 13px;
+      color: #8e8e93;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      border: 1px solid #d0d0d5;
+      overflow: hidden;
+      margin: 16px 0;
+    }
+
+    .list-item {
+      padding: 14px 16px;
+      font-size: 17px;
+      border-bottom: 1px solid #d0d0d5;
+      display: flex;
+      align-items: center;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .list-item:last-child { border-bottom: none; }
+
+    .icon-wrapper {
+      width: 32px;
+      height: 32px;
+      margin-right: 12px;
+      background: #e5e5ea;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #007aff;
+    }
+
+    .flag {
+      font-size: 22px;
+      margin-right: 8px;
+    }
+
+    .tag {
+      background: #34c759;
+      color: white;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-left: auto;
+    }
+
+    .tabs {
+      display: flex;
+      background: #e5e5ea;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 16px 0;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px 0;
+      text-align: center;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .tab.active {
+      background: white;
+    }
+
+    .qr-box {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      margin: 20px 0;
+      border: 1px solid #d0d0d5;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 14px;
+      font-size: 17px;
+      border: 1px solid #d0d0d5;
+      border-radius: 10px;
+      margin: 16px 0;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .blue-btn {
+      background: #007aff;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 17px;
+      font-weight: 600;
+      width: 100%;
+      margin: 12px 0;
+      cursor: pointer;
+    }
+
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      background: white;
+      border-top: 1px solid #d0d0d5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      box-sizing: border-box;
+      z-index: 1000;
+    }
+
+    .nav-btn {
+      padding: 10px 28px;
+      border-radius: 10px;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .back-btn {
+      background: white;
+      color: #007aff;
+      border: 1px solid #007aff;
+    }
+
+    .next-btn, .done-btn {
+      background: #007aff;
+      color: white;
+      border: none;
+    }
+
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <h2>Mini App диагностика</h2>
-  <div class="card">
-    <div><b>API:</b> <code id="apiBase"></code></div>
-    <div><b>initData длина:</b> <code id="initLen">0</code></div>
-    <div><b>user:</b> <code id="userStr">—</code></div>
-    <small>Открой именно внутри Telegram. В обычном браузере initData будет пустым.</small>
+
+<div class="header">
+  <span class="close-btn" onclick="tg.close()">Закрыть</span>
+  <span class="title">BARNAUL V</span>
+  <span class="more-btn">⋯</span>
+</div>
+
+<div class="content">
+
+  <!-- Главный экран -->
+  <div id="main">
+    <h2>Подписка</h2>
+
+    <div class="card">
+      <div style="padding:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <span style="color:#8e8e93;">Подписка</span>
+          <span style="background:#ffcc00;color:#000;padding:4px 12px;border-radius:20px;font-size:13px;">Неактивна</span>
+        </div>
+
+        <div style="background:#f2f2f7;border-radius:10px;padding:12px;margin:12px 0;">
+          <div style="display:flex;align-items:center;">
+            <span style="font-size:24px;margin-right:12px;">👤</span>
+            <span>Пользователь Alex</span>
+            <span style="margin-left:auto;color:#8e8e93;">Лимит устройств 1</span>
+          </div>
+        </div>
+
+        <div style="background:#ffe6e6;border-radius:10px;padding:12px;color:#ff3b30;font-weight:600;">
+          Подписка истекла 19.01.2026 01:36 MSK
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:13px;color:#8e8e93;text-align:center;margin:24px 0;">
+      УЖЕ ЕСТЬ V2RAYTUN ИЛИ HAPP?
+    </div>
+
+    <button class="blue-btn" onclick="show('add')">Добавить подписку</button>
+
+    <div style="font-size:13px;color:#8e8e93;text-align:center;margin:32px 0 12px;">
+      ПОДКЛЮЧЕНИЕ VPN
+    </div>
+
+    <div class="card">
+      <div class="list-item" onclick="show('smartphone1')">
+        <span style="font-size:24px;margin-right:12px;">📱</span> Установка на Смартфон
+      </div>
+      <div class="list-item" onclick="show('pc')">
+        <span style="font-size:24px;margin-right:12px;">💻</span> Установка на ПК
+      </div>
+      <div class="list-item" onclick="show('tv')">
+        <span style="font-size:24px;margin-right:12px;">📺</span> Подключить на TV
+      </div>
+    </div>
   </div>
 
-  <div class="row">
-    <button id="btnMe">Вызвать /api/me</button>
-    <button id="btnHealth">Вызвать /health</button>
+  <!-- Смартфон шаг 1 -->
+  <div id="smartphone1" class="hidden">
+    <h2>Установка на Смартфон</h2>
+    <div class="step-label">ШАГ 1: СКАЧАЙТЕ ПРИЛОЖЕНИЕ</div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('happ')">Happ</div>
+      <div class="tab" onclick="switchTab('v2')">V2RayTun</div>
+    </div>
+
+    <div id="happ-content">
+      <div class="card">
+        <a href="https://apps.apple.com/ru/app/happ-proxy-utility-plus/id6746188973" target="_blank" class="list-item">
+          <span class="flag">🇷🇺</span> Happ (RU) iPhone/Mac <span class="tag">Ваше устройство 📱</span>
+        </a>
+        <a href="https://apps.apple.com/us/app/happ-proxy-utility/id6504287215" target="_blank" class="list-item">
+          <span class="flag">🇪🇺</span> Happ (EN) iPhone/Mac <span class="tag">Ваше устройство 📱</span>
+        </a>
+        <a href="https://play.google.com/store/apps/details?id=com.happproxy" target="_blank" class="list-item">
+          <span style="font-size:24px;margin-right:12px;">▶</span> Happ для Android
+        </a>
+        <a href="https://github.com/Happ-proxy/happ-android/releases/latest/download/Happ.apk" target="_blank" class="list-item">
+          <span style="font-size:24px;margin-right:12px;">🐱</span> Happ (APK) для Android
+        </a>
+      </div>
+    </div>
+
+    <div id="v2-content" class="hidden">
+      <div class="card">
+        <a href="https://apps.apple.com/us/app/v2raytun/id6476628951" target="_blank" class="list-item">
+          <span style="font-size:24px;margin-right:12px;">A</span> V2RayTun для iPhone/Mac <span class="tag">Ваше устройство 📱</span>
+        </a>
+        <a href="https://play.google.com/store/apps/details?id=com.v2raytun.android" target="_blank" class="list-item">
+          <span style="font-size:24px;margin-right:12px;">▶</span> V2RayTun для Android
+        </a>
+      </div>
+    </div>
+
+    <div class="bottom-bar">
+      <button class="nav-btn back-btn" onclick="show('main')">Назад</button>
+      <button class="nav-btn next-btn" onclick="show('smartphone2')">Далее</button>
+    </div>
   </div>
 
-  <div class="card">
-    <b>Ответ</b>
-    <pre id="out">—</pre>
+  <!-- Смартфон шаг 2 -->
+  <div id="smartphone2" class="hidden">
+    <h2>Установка на Смартфон</h2>
+    <div class="step-label">ШАГ 2: ДОБАВЬТЕ ПОДПИСКУ</div>
+
+    <div class="card">
+      <div class="list-item">
+        <span class="icon-wrapper">H</span> Авто-настройка Happ
+      </div>
+      <div class="list-item">
+        <span class="icon-wrapper">V</span> Авто-настройка V2RayTun
+      </div>
+      <div class="list-item">
+        <span class="icon-wrapper">🔗</span> Скопировать ссылку
+      </div>
+    </div>
+
+    <div style="text-align:center;color:#8e8e93;margin:20px 0;">
+      Или вручную
+    </div>
+
+    <button class="blue-btn" style="background:transparent;border:1px solid #007aff;color:#007aff;">
+      Показать QR-код
+    </button>
+
+    <div class="bottom-bar">
+      <button class="nav-btn back-btn" onclick="show('smartphone1')">Назад</button>
+      <button class="nav-btn done-btn">Готово</button>
+    </div>
   </div>
 
-  <script>
-    const API_BASE = "https://api.blogyoga.site";
-    document.getElementById("apiBase").textContent = API_BASE;
+  <!-- ПК -->
+  <div id="pc" class="hidden">
+    <h2>Установка на ПК</h2>
+    <div class="step-label">ШАГ 1: УСТАНОВИТЕ ПРИЛОЖЕНИЕ</div>
 
-    function out(obj, ok=true) {
-      const el = document.getElementById("out");
-      el.className = ok ? "ok" : "err";
-      el.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
-    }
+    <p style="font-size:15px;line-height:1.4;">
+      Откройте нашего бота на вашем компьютере в Telegram и следуйте данной инструкции
+    </p>
 
-    // Telegram WebApp
-    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    <p style="font-size:15px;color:#8e8e93;line-height:1.4;margin-top:16px;">
+      Нужно скачать необходимое приложение на ваш выбор и после установки добавить подписку в зависимости от приложения.
+    </p>
 
-    if (!tg) {
-      out("Telegram.WebApp не найден. Открой страницу внутри Telegram Mini App.", false);
-    } else {
-      tg.ready();
-      tg.expand();
+    <div class="card">
+      <div class="list-item">
+        <span class="icon-wrapper">🪟</span> Happ для Windows
+      </div>
+      <div class="list-item">
+        <span class="icon-wrapper">V</span> V2RayTun для Windows
+      </div>
+      <div class="list-item">
+        <span class="icon-wrapper">A</span> Happ (RU) для macOS
+      </div>
+    </div>
 
-      const initData = tg.initData || "";
-      document.getElementById("initLen").textContent = String(initData.length);
+    <div class="bottom-bar">
+      <button class="nav-btn back-btn" onclick="show('main')">Назад</button>
+      <button class="nav-btn next-btn" onclick="show('add')">Далее</button>
+    </div>
+  </div>
 
-      const u = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
-      document.getElementById("userStr").textContent = u ? `${u.id} @${u.username || ""}` : "—";
+  <!-- TV -->
+  <div id="tv" class="hidden">
+    <h2>Отправить подписку на TV</h2>
 
-      async function call(path, withInit=true) {
-        const headers = {};
-        if (withInit) headers["X-Tg-Init-Data"] = initData;
-        const r = await fetch(API_BASE + path, { method: "GET", headers, credentials: "omit" });
-        const text = await r.text();
-        let data;
-        try { data = JSON.parse(text); } catch { data = { raw: text }; }
-        return { http: r.status, data };
-      }
+    <div class="qr-box">
+      <p style="font-size:15px;margin-bottom:8px;">Visit this link in a browser</p>
+      <p style="font-weight:600;">https://tv.happ.su</p>
+      <p style="margin:20px 0;color:#8e8e93;">OR</p>
+      <div style="width:160px;height:160px;background:#f0f0f0;border-radius:12px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;color:#aaa;">
+        QR
+      </div>
+      <p style="font-size:32px;font-weight:700;letter-spacing:6px;color:#000;">89FRE</p>
+    </div>
 
-      document.getElementById("btnHealth").onclick = async () => {
-        try {
-          const res = await call("/health", false);
-          out(res, res.http >= 200 && res.http < 300);
-        } catch (e) {
-          out(String(e), false);
-        }
-      };
+    <p style="font-size:15px;line-height:1.4;margin:20px 0;">
+      Скачайте и откройте Happ на телевизоре, затем выберите «Веб-импорт». На экране появится 5-значный код (UID).
+    </p>
 
-      document.getElementById("btnMe").onclick = async () => {
-        try {
-          const res = await call("/api/me", true);
-          out(res, res.http >= 200 && res.http < 300);
-        } catch (e) {
-          out(String(e), false);
-        }
-      };
-    }
-  </script>
+    <input type="text" placeholder="UID телевизора" class="input-field" />
+
+    <button class="blue-btn">Отправить подписку</button>
+
+    <p style="font-size:13px;color:#8e8e93;text-align:center;margin-top:16px;">
+      Мы отправим текущую подписку в формате Base64 на сервер Happ.
+    </p>
+
+    <div class="bottom-bar">
+      <button class="nav-btn back-btn" onclick="show('main')">Назад</button>
+    </div>
+  </div>
+
+  <!-- Добавить подписку -->
+  <div id="add" class="hidden">
+    <h2>Добавить подписку</h2>
+
+    <div class="card">
+      <div class="list-item">
+        <span class="icon-wrapper">H</span> Авто-настройка Happ
+      </div>
+      <div class="list-item">
+        <span class="icon-wrapper">V</span> Авто-настройка V2RayTun
+      </div>
+      <div class="list-item">
+        <span class="icon-wrapper">🔗</span> Скопировать ссылку
+      </div>
+    </div>
+
+    <div style="text-align:center;color:#8e8e93;margin:24px 0;">
+      Или вручную
+    </div>
+
+    <button class="blue-btn" style="background:transparent;border:1px solid #007aff;color:#007aff;">
+      Показать QR-код
+    </button>
+
+    <div class="bottom-bar">
+      <button class="nav-btn back-btn" onclick="show('main')">Назад</button>
+      <button class="nav-btn done-btn">Готово</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  tg.expand();
+
+  function show(id) {
+    document.querySelectorAll('#main, #smartphone1, #smartphone2, #pc, #tv, #add').forEach(el => {
+      el.classList.add('hidden');
+    });
+    document.getElementById(id).classList.remove('hidden');
+  }
+
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+
+    document.getElementById('happ-content').classList.toggle('hidden', tabName !== 'happ');
+    document.getElementById('v2-content').classList.toggle('hidden', tabName !== 'v2');
+  }
+
+  // Инициализация
+  show('main');
+
+  // Демо-уведомления для основных кнопок
+  document.querySelectorAll('.blue-btn, .done-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      tg.showAlert('Действие выполнено (демо)');
+    });
+  });
+</script>
+
 </body>
 </html>
